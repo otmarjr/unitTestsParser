@@ -23,7 +23,7 @@ namespace unitTestsParser
             {
                 Console.WriteLine(fsm);
             }
-            Console.ReadKey();
+            // Console.ReadKey();
         }
     }
 }

@@ -120,8 +120,8 @@ namespace unitTestsParser
                 }
 
                 sbSFM.Clear();
-
-                sbSFM.AppendLine(string.Format("FSM {0} - {1}", currentMachine++,this.testSequences[currentMachine-1].Sequence.First().DeclaringType.Name));
+                
+                sbSFM.AppendLine(string.Format("FSM {0} - {1}", currentMachine, group.Key));
                 sbSFM.Append("S = {");
                 sbSFM.Append(string.Join<int>(",",Enumerable.Range(1,lastCreatedState)));
                 sbSFM.Append("}");
@@ -136,6 +136,7 @@ namespace unitTestsParser
                 sbSFM.AppendLine("}");
 
                 fsms.Add(sbSFM.ToString());
+                currentMachine = currentMachine + 1;
             }
 
             return fsms;
