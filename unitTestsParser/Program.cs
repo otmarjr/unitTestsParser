@@ -19,6 +19,10 @@ namespace unitTestsParser
 
             tp.Parse();
 
+            foreach (var fsm in tp.GetClassesFiniteStateMachines())
+            {
+                Console.WriteLine(fsm);
+            }
             Console.ReadKey();
         }
     }
