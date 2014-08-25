@@ -85,6 +85,81 @@ namespace unitTestsParser
             }   
         }
 
+		public List<string> GenerateNuSMVModules()
+		{
+			var modules = new List<string> ();
+
+			var testsPerClass = this.testSequences.GroupBy(ts => ts.Sequence.First().DeclaringType.Name).ToList();
+
+			var sbSFM = new StringBuilder();
+
+			var methodTransitions = new Dictionary<string, List<Tuple<int,int>>> ();
+			var existingMethods = new List<string> ();
+			foreach (var group in testsPerClass) 
+			{
+				var @class = group.Key;
+				var currentState = 1;
+				var lastCreatedState = currentState;
+				var transitions = new List<Tuple<int, int, string>>();
+				var acceptingStates = new List<int>();
+
+				sbSFM.Clear ();
+				sbSFM.AppendLine (string.Format("MODULE {0} (called_method)", @class));
+				sbSFM.AppendLine("\tVAR state : { s1");
+
+				foreach (var unitTest in group)
+				{
+					currentState = 1;
+
+					foreach (var step in unitTest.Sequence)
+					{
+						var classOfFirstMethodInTheSequence = unitTest.Sequence.First ().DeclaringType.Name;
+
+						if (!classOfFirstMethodInTheSequence.Equals (@class))
+							continue;
+
+						var newState = lastCreatedState + 1;
+						lastCreatedState=newState;
+						string calledMethod = string.Format("{0}_{1}",@class.Replace("`", "_"), step.Name.Replace(".","_"));
+						transitions.Add(new Tuple<int, int, string>(currentState, newState, calledMethod));
+						if (!existingMethods.Contains (calledMethod))
+							existingMethods.Add (calledMethod);
+
+						sbSFM.Append (", s" + newState);
+
+						if (!methodTransitions.ContainsKey(calledMethod)) {
+							methodTransitions [calledMethod] = new List<Tuple<int, int>> ();
+						}
+
+						methodTransitions [calledMethod].Add (new Tuple<int, int> (currentState, newState));
+						currentState = newState;
+					}
+
+					acceptingStates.Add(lastCreatedState);
+				}
+
+				sbSFM.Append ("};");
+				sbSFM.AppendLine ();
+				sbSFM.Append ("methods: {");
+				sbSFM.Append (string.Join (",", existingMethods));
+				sbSFM.AppendLine ("} ;");
+				sbSFM.AppendLine ("ASSIGN");
+				sbSFM.AppendLine ("init(state) := s1;");
+				sbSFM.AppendLine ("next(state) := case ");
+
+				foreach (var methodPaths in methodTransitions) {
+					foreach (var transition in methodPaths.Value) {
+						sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2};", methodPaths.Key, transition.Item1, transition.Item2));
+					}
+				}
+				sbSFM.AppendLine ("TRUE: state;");
+				sbSFM.AppendLine ("esac;");
+
+				modules.Add(sbSFM.ToString());
+			}
+			return modules;
+		}
+
         public List<string> GetClassesFiniteStateMachines()
         {
             List<string> fsms = new List<string>();

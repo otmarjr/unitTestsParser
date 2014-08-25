@@ -12,17 +12,27 @@ namespace unitTestsParser
     
         static void Main(string[] args)
         {
-            string pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.dll";
-            string pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
+            // string pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.dll";
+            // string pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
+
+			string pacoteBiblioteca = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.dll"; 
+			string pacoteTestes = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.Test.dll";
 
             var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
 
             tp.Parse();
 
+			/*
             foreach (var fsm in tp.GetClassesFiniteStateMachines())
             {
                 Console.WriteLine(fsm);
-            }
+            }*/
+
+			foreach (var mod in tp.GenerateNuSMVModules())
+			{
+				Console.WriteLine(mod);
+			}
+
             // Console.ReadKey();
         }
     }
