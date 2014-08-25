@@ -24,9 +24,49 @@ namespace unitTestsParser
 
 			return false;
 		}
-		public List<string> GetSequenceOfCalls()
+
+		List<MethodDefinition> GetMethodsInstantiatingLibraryVariables (AssemblyDefinition dep)
 		{
-			List<string> calls = new List<string>();
+			var methods = new List<MethodDefinition> ();
+
+			foreach (var t in dep.MainModule.Types) {
+				foreach (var m in t.Methods)
+				{
+					if (m.HasBody && m.Body.HasVariables) {
+
+						foreach (var v in m.Body.Variables) {
+							if (v.VariableType.Namespace.StartsWith (this.targetPackage, StringComparison.CurrentCultureIgnoreCase)) {
+								methods.Add (m);
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			return methods;
+		}
+
+		private List<string> SequenceOfLibraryCallsMadeInsideMethod(MethodDefinition method)
+		{
+			List<string> sequence = new List<string>();
+
+			foreach (var inst in method.Body.Instructions) {
+				if (ReflectionHelper.IsMethodCall (inst)) {
+					var mr = inst.Operand as MethodReference;
+
+					if (mr.DeclaringType.Namespace.StartsWith (this.targetPackage, StringComparison.InvariantCultureIgnoreCase)) {
+						sequence.Add (ReflectionHelper.MethodCallAsString (mr.DeclaringType.Name, mr.Name));
+					}
+				}
+			}
+
+			return sequence;
+		}
+
+		public List<List<string>> GetSequenceOfCalls()
+		{
+			var calls = new List<List<string>>();
 			// Sequence of calls inside a single method!
 			List<AssemblyDefinition> targetLibDependentAssemblies = new List<AssemblyDefinition> ();
 
@@ -34,6 +74,13 @@ namespace unitTestsParser
 				var asm = AssemblyDefinition.ReadAssembly (dllFile);
 				if (this.AssemblyIsDependentOnTargetPackage (asm)) {
 					targetLibDependentAssemblies.Add (asm);
+				}
+			}
+
+			foreach (var dep in targetLibDependentAssemblies) {
+				var methodsInstantiatingLibraryVaribles = this.GetMethodsInstantiatingLibraryVariables (dep);
+				foreach (var m in methodsInstantiatingLibraryVaribles) {
+					calls.Add (SequenceOfLibraryCallsMadeInsideMethod (m));
 				}
 			}
 

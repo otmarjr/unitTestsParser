@@ -37,6 +37,14 @@ namespace unitTestsParser
 			var cp = new ClientLibraryParser ("/Users/otmarpereira/Downloads/Cuyahoga-1.7.0-bin/bin", "NHibernate");
 			var formalSpecs = cp.GetSequenceOfCalls ();
 
+			int cont_sepc = 1;
+			foreach (var spec in formalSpecs) {
+				Console.WriteLine ("=>Spec " + cont_sepc++);
+				foreach (var call in spec) {
+					Console.WriteLine ("\t" + call);
+				}
+			}
+
             // Console.ReadKey();
         }
     }

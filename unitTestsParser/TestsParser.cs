@@ -27,7 +27,7 @@ namespace unitTestsParser
 
         List<MethodDefinition> unitTestsMethods;
 
-        private Predicate<Instruction> IsMethodCall = i => i.Operand != null && i.Operand as MethodReference != null;
+        
         private Predicate<MethodReference> IsAssertion = mr => mr.DeclaringType.Name.Equals("Assert");
 
         private AssemblyDefinition unitTestsAssembly;
@@ -46,7 +46,7 @@ namespace unitTestsParser
             unitTestsMethods = testClasses.SelectMany(t => t.Methods).Cast<MethodDefinition>()
                                 .Where(m => m.HasBody)
                                 .Where(m => m.CustomAttributes.Any(a => a.AttributeType.Name.Equals("TestAttribute")))
-                                .Where(m => m.Body.Instructions.Cast<Instruction>().Where(i=>IsMethodCall(i)).Select(i => i.Operand as MethodReference).Where(mr => IsAssertion(mr)).Count() > 0)
+				.Where(m => m.Body.Instructions.Cast<Instruction>().Where(i=>ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference).Where(mr => IsAssertion(mr)).Count() > 0)
                 .ToList();
         }
 
@@ -76,8 +76,8 @@ namespace unitTestsParser
             this.testSequences = new List<TestCallSequence>();
             foreach (var md in this.unitTestsMethods)
             {
-                var methodBodyCalls = md.Body.Instructions.Cast<Instruction>().Where(i => IsMethodCall(i)).Select(i => i.Operand as MethodReference);
-                var assertions = md.Body.Instructions.Cast<Instruction>().Where(i => IsMethodCall(i)).Select(i => i.Operand as MethodReference).Where(mr => IsAssertion(mr)).ToList();
+                var methodBodyCalls = md.Body.Instructions.Cast<Instruction>().Where(i => ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference);
+                var assertions = md.Body.Instructions.Cast<Instruction>().Where(i => ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference).Where(mr => IsAssertion(mr)).ToList();
                 var sequenceOfLibraryCalls
                     = methodBodyCalls.Except(assertions).Where(mr => mr.DeclaringType.Resolve().Module.FullyQualifiedName.Equals(this.libraryAssembly.MainModule.FullyQualifiedName)).ToList();
                 if (sequenceOfLibraryCalls.Count > 0 )
@@ -119,7 +119,7 @@ namespace unitTestsParser
 
 						var newState = lastCreatedState + 1;
 						lastCreatedState=newState;
-						string calledMethod = string.Format("{0}_{1}",@class.Replace("`", "_"), step.Name.Replace(".","_"));
+						string calledMethod = ReflectionHelper.MethodCallAsString (step.DeclaringType.Name, step.Name);//  string.Format("{0}_{1}",@class.Replace("`", "_"), step.Name.Replace(".","_"));
 						transitions.Add(new Tuple<int, int, string>(currentState, newState, calledMethod));
 						if (!existingMethods.Contains (calledMethod))
 							existingMethods.Add (calledMethod);
