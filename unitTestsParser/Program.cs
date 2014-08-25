@@ -26,12 +26,16 @@ namespace unitTestsParser
             foreach (var fsm in tp.GetClassesFiniteStateMachines())
             {
                 Console.WriteLine(fsm);
-            }*/
+            }
 
 			foreach (var mod in tp.GenerateNuSMVModules())
 			{
 				Console.WriteLine(mod);
 			}
+			*/
+
+			var cp = new ClientLibraryParser ("/Users/otmarpereira/Downloads/Cuyahoga-1.7.0-bin/bin", "NHibernate");
+			var formalSpecs = cp.GetSequenceOfCalls ();
 
             // Console.ReadKey();
         }
