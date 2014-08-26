@@ -51,6 +51,7 @@ namespace unitTestsParser
 		{
 			List<string> sequence = new List<string>();
 
+			sequence.Add ("Client method: " + method.DeclaringType.Namespace + "." + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name));
 			foreach (var inst in method.Body.Instructions) {
 				if (ReflectionHelper.IsMethodCall (inst)) {
 					var mr = inst.Operand as MethodReference;

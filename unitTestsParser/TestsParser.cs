@@ -61,7 +61,9 @@ namespace unitTestsParser
 
         internal class TestCallSequence
         {
-            public List<MethodReference> Sequence { get; set; }
+			public MethodDefinition OriginalUnitTest { get; set; }
+
+			public List<MethodReference> Sequence { get; set; }
 
             public List<MethodReference> Assertions {get;set;}
         }
@@ -78,20 +80,23 @@ namespace unitTestsParser
                 var sequenceOfLibraryCalls
                     = methodBodyCalls.Except(assertions).Where(mr => mr.DeclaringType.Resolve().Module.FullyQualifiedName.Equals(this.libraryAssembly.MainModule.FullyQualifiedName)).ToList();
                 if (sequenceOfLibraryCalls.Count > 0 )
-                    this.testSequences.Add(new TestCallSequence() { Sequence = sequenceOfLibraryCalls, Assertions = assertions });
+                    this.testSequences.Add(new TestCallSequence() { Sequence = sequenceOfLibraryCalls, Assertions = assertions, OriginalUnitTest = md });
             }   
         }
 		public List<string> GenerateNuSMVModulesPerUnitTest()
 		{
             var modules = new List<string>();
 
-            this.testSequences.OrderBy(ts => ReflectionHelper.MethodCallAsString(ts.Sequence.First().DeclaringType.Name, ts.Sequence.First().Name));
+			this.testSequences = this.testSequences.OrderBy(ts => ReflectionHelper.MethodCallAsString(ts.Sequence.First().DeclaringType.Name, ts.Sequence.First().Name)).ToList();
 
             var sbSFM = new StringBuilder();
 
             var methodTransitions = new Dictionary<string, List<Tuple<int, int>>>();
             var existingMethods = new List<string>();
             
+
+			var unitTestOccurrences = new Dictionary<string, int> ();
+
             foreach (var unitTest in this.testSequences)
             {
                 methodTransitions.Clear();
@@ -103,8 +108,17 @@ namespace unitTestsParser
                 var transitions = new List<Tuple<int, int, string>>();
                 var acceptingStates = new List<int>();
 
+				var moduleName = ReflectionHelper.MethodCallAsString (unitTest.Sequence.First ().DeclaringType.Name, unitTest.Sequence.First ().Name);
+				int testIndex = 1;
+
+				if (unitTestOccurrences.ContainsKey (moduleName)) {
+					testIndex = unitTestOccurrences [moduleName] + 1;
+				}
+
+				unitTestOccurrences [moduleName] = testIndex;
+
                 sbSFM.Clear();
-                sbSFM.AppendLine(string.Format("MODULE {0} (called_method)", ReflectionHelper.MethodCallAsString(unitTest.Sequence.First().DeclaringType.Name, unitTest.Sequence.First().Name)));
+				sbSFM.AppendLine(string.Format("MODULE {0}_{1} (called_method) -- original unit test: {2}", moduleName,testIndex, ReflectionHelper.MethodCallAsString(unitTest.OriginalUnitTest.DeclaringType.Name, unitTest.OriginalUnitTest.Name) ));
                 sbSFM.AppendLine("\tVAR state : { s1");
 
                 currentState = 1;
@@ -161,6 +175,24 @@ namespace unitTestsParser
                 sbSFM.AppendLine("\t\t TRUE: FALSE; -- By default, not at accepting state.");
                 sbSFM.AppendLine("esac;");
 
+				foreach (var assert in unitTest.Assertions) 
+				{
+					var sb = new StringBuilder ();
+
+					sb.Append (assert.Name);
+					sb.Append (" (");
+
+					/* foreach (var p in assert.Parameters) {
+						sb.Append (assert.Resolve().Parameters[p.Index].Name);
+						sb.Append (" = ");
+						sb.Append (ReflectionHelper.ResolveParameterValue (p, assert, unitTest.OriginalUnitTest));
+					}*/
+
+					sb.Append (" )");
+
+					// sbSFM.AppendLine ("--Assertion: " + sb.ToString());		
+					sbSFM.AppendLine ("-- Assertion: " + ReflectionHelper.LogValues(assert.Resolve()));
+				}
 
                 modules.Add(sbSFM.ToString());
             }
@@ -258,7 +290,7 @@ namespace unitTestsParser
         {
             List<string> fsms = new List<string>();
 
-            var testsPerClass = this.testSequences.GroupBy(ts => ts.Sequence.First().DeclaringType.Name).ToList();
+			var testsPerClass = this.testSequences.GroupBy(ts => ts.Sequence.First().DeclaringType.Name).OrderBy(g => g.Key).ToList();
 
             var sbSFM = new StringBuilder();
 
@@ -270,7 +302,6 @@ namespace unitTestsParser
                 var lastCreatedState = currentState;
                 var transitions = new List<Tuple<int, int, string>>();
                 var acceptingStates = new List<int>();
-                var initialStates = new List<int>() { currentState };
 
                 foreach (var unitTest in group)
                 {
