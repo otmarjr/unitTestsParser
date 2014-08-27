@@ -1,4 +1,4 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
@@ -209,6 +209,7 @@ namespace unitTestsParser
 
 			var methodTransitions = new Dictionary<string, List<Tuple<int,int>>> ();
 			var existingMethods = new List<string> ();
+
 			foreach (var group in testsPerClass) 
 			{
 				var @class = group.Key;
@@ -216,6 +217,7 @@ namespace unitTestsParser
 				var lastCreatedState = currentState;
 				var transitions = new List<Tuple<int, int, string>>();
 				var acceptingStates = new List<int>();
+				var transitionTests = new Dictionary<Tuple<int,int,string>, TestCallSequence > ();
 
 				sbSFM.Clear ();
 				sbSFM.AppendLine (string.Format("MODULE {0} (called_method)", @class.Replace("`", "_")));
@@ -232,6 +234,7 @@ namespace unitTestsParser
 						if (!classOfFirstMethodInTheSequence.Equals (@class))
 							continue;
 
+<<<<<<< Upstream, based on origin/master
 						string calledMethod = string.Format("{0}_{1}",step.DeclaringType.Name.Replace("`", "_"), step.Name.Replace(".","_"));
 
                         int nextState;
@@ -255,6 +258,17 @@ namespace unitTestsParser
                         }
                         
                         transitions.Add(new Tuple<int, int, string>(currentState, nextState, calledMethod));
+=======
+						var newState = lastCreatedState + 1;
+						lastCreatedState=newState;
+						string calledMethod = ReflectionHelper.MethodCallAsString(step.DeclaringType.Name, step.Name);
+						var transition = new Tuple<int, int, string> (currentState, newState, calledMethod); 
+						transitions.Add(transition);
+
+						if (currentState == 1)
+							transitionTests.Add (transition, unitTest);
+
+>>>>>>> 22111c4 comentários do teste unitário na geração de módulo por classe.
 						if (!existingMethods.Contains (calledMethod))
 							existingMethods.Add (calledMethod);
 
@@ -277,11 +291,19 @@ namespace unitTestsParser
 				sbSFM.AppendLine ("init(state) := s1;");
 				sbSFM.AppendLine ("next(state) := case ");
 
+				foreach (var t in transitions) {
+					if (transitionTests.ContainsKey (t))
+						sbSFM.AppendLine (string.Format("-- Sequence present in unit test : {0}", transitionTests[t].OriginalUnitTest.FullName));
+
+					sbSFM.AppendLine (string.Format ("(called_method = {0}) & state = s{1} : s{2};", t.Item3, t.Item1, t.Item2));
+				}
+
+				/*
 				foreach (var methodPaths in methodTransitions) {
 					foreach (var transition in methodPaths.Value) {
-						sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2};", methodPaths.Key, transition.Item1, transition.Item2));
+						sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2}; -- from unit test {3}", methodPaths.Key, transition.Item1, transition.Item2, ReflectionHelper.MethodCallAsString(transitionTests[transition].OriginalUnitTest.DeclaringType.Name, transitionTests[transition].OriginalUnitTest.Name )));
 					}
-				}
+				}*/
 				sbSFM.AppendLine ("TRUE: state;");
 				sbSFM.AppendLine ("esac;");
 

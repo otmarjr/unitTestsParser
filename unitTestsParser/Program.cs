@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -95,6 +95,12 @@ namespace unitTestsParser
 			}
 
 			if (execMode == ExecutionMode.ModulePerUnitTest) {
+<<<<<<< Upstream, based on origin/master
+=======
+				var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
+
+				tp.Parse();
+>>>>>>> 22111c4 comentários do teste unitário na geração de módulo por classe.
 				foreach (var mod in tp.GenerateNuSMVModulesPerUnitTest()) {
 					Console.WriteLine (mod);
 				}
