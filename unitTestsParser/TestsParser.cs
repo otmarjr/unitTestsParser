@@ -294,6 +294,7 @@ namespace unitTestsParser
 
             var sbSFM = new StringBuilder();
 
+			var transitionTests = new Dictionary<Tuple<int,int,string>, TestCallSequence > ();
             int currentMachine = 0;
             foreach (var group in testsPerClass)
             {
@@ -312,7 +313,13 @@ namespace unitTestsParser
                         var newState = lastCreatedState + 1;
                         lastCreatedState=newState;
                         string calledMethod = step.FullName;
-                        transitions.Add(new Tuple<int, int, string>(currentState, newState, calledMethod));
+						var transition = new Tuple<int, int, string> (currentState, newState, calledMethod); 
+
+						if (currentState == 1) {
+							transitionTests.Add (transition, unitTest);
+						}
+
+						transitions.Add(transition);
                         currentState = newState;
                     }
 
@@ -332,7 +339,10 @@ namespace unitTestsParser
                 sbSFM.Append("}");
                 sbSFM.Append(Environment.NewLine);
                 sbSFM.AppendLine("δ  = {");
-                transitions.ForEach(t => sbSFM.AppendLine(string.Format("{0} -- {1} -- > {2}", t.Item1, t.Item3, t.Item2)));
+				transitions.ForEach(t => {
+					if (transitionTests.ContainsKey(t)) sbSFM.AppendLine("//Transitions originally in unit test : " + transitionTests[t].OriginalUnitTest.FullName);
+					sbSFM.AppendLine(string.Format("{0} -- {1} -- > {2}", t.Item1, t.Item3, t.Item2));
+				});
                 sbSFM.AppendLine("}");
 
                 fsms.Add(sbSFM.ToString());
