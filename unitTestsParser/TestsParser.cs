@@ -232,24 +232,39 @@ namespace unitTestsParser
 						if (!classOfFirstMethodInTheSequence.Equals (@class))
 							continue;
 
-						var newState = lastCreatedState + 1;
-						lastCreatedState=newState;
 						string calledMethod = string.Format("{0}_{1}",step.DeclaringType.Name.Replace("`", "_"), step.Name.Replace(".","_"));
-						transitions.Add(new Tuple<int, int, string>(currentState, newState, calledMethod));
+
+                        int nextState;
+
+                        var targetState = transitions.Find(t => t.Item1 == currentState && t.Item3.Equals(calledMethod));
+
+                        if (targetState != null)
+                        {
+                            nextState = targetState.Item2;
+                        }
+                        else
+                        {
+                            nextState = lastCreatedState + 1;
+                            lastCreatedState = nextState;
+                            sbSFM.Append(", s" + nextState);
+                            if (!methodTransitions.ContainsKey(calledMethod))
+                            {
+                                methodTransitions[calledMethod] = new List<Tuple<int, int>>();
+                            }
+                            methodTransitions[calledMethod].Add(new Tuple<int, int>(currentState, nextState));
+                        }
+                        
+                        transitions.Add(new Tuple<int, int, string>(currentState, nextState, calledMethod));
 						if (!existingMethods.Contains (calledMethod))
 							existingMethods.Add (calledMethod);
 
-						sbSFM.Append (", s" + newState);
+                        currentState = nextState;
 
-						if (!methodTransitions.ContainsKey(calledMethod)) {
-							methodTransitions [calledMethod] = new List<Tuple<int, int>> ();
-						}
-
-						methodTransitions [calledMethod].Add (new Tuple<int, int> (currentState, newState));
-						currentState = newState;
+                        if (step.Equals(unitTest.Sequence.Last()))
+                        {
+                            acceptingStates.Add(nextState);
+                        }
 					}
-
-					acceptingStates.Add(lastCreatedState);
 				}
 
 				sbSFM.Append ("};");

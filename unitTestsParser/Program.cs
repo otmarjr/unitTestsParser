@@ -50,10 +50,23 @@ namespace unitTestsParser
             // string pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.dll";
             // string pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
 
-			string pacoteBiblioteca = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.dll"; 
-			string pacoteTestes = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.Test.dll";
-			string clientLibPath = "/Users/otmarpereira/Downloads/Cuyahoga-1.7.0-bin/bin";
-			string libName = "NHibernate";
+            string pacoteBiblioteca;
+            string pacoteTestes;
+            string clientLibPath;
+            if (Environment.OSVersion.Platform == PlatformID.MacOSX)
+            {
+                 pacoteBiblioteca = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.dll";
+                 pacoteTestes = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.Test.dll";
+                 clientLibPath = "/Users/otmarpereira/Downloads/Cuyahoga-1.7.0-bin/bin";
+            }
+            else
+            {
+                pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.dll";
+                pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
+                clientLibPath = @"C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin";
+            }
+
+            string libName = "NHibernate";
 
 			var execMode = GetExecutionModeFromCommandLineArguments (args);
 
@@ -85,7 +98,7 @@ namespace unitTestsParser
 				}
 			}
 
-			if (execMode == ExecutionMode.ModulePerClass) {
+			if (execMode == ExecutionMode.ModulePerUnitTest) {
 				var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
 
 				tp.Parse();
