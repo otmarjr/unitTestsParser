@@ -75,7 +75,7 @@ namespace unitTestsParser
             foreach (var md in this.unitTestsMethods)
             {
                 var methodBodyCalls = md.Body.Instructions.Cast<Instruction>().Where(i => ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference);
-                var assertions = ReflectionHelper.GetSequenceOfMethodCallsInsideMethod(md);
+                var assertions = md.Body.Instructions.Cast<Instruction>().Where(i => ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference).Where(mr => IsAssertion(mr)).ToList();
                 var sequenceOfLibraryCalls
                     = methodBodyCalls.Except(assertions).Where(mr => mr.DeclaringType.Resolve().Module.FullyQualifiedName.Equals(this.libraryAssembly.MainModule.FullyQualifiedName)).ToList();
 
@@ -323,17 +323,19 @@ namespace unitTestsParser
                 {
                     currentState = 1;
 
-                    var calls = ReflectionHelper.ComputeMethodCalls(unitTest.OriginalUnitTest);
-
                     foreach (var step in unitTest.Sequence)
                     {
                         string calledMethod = ReflectionHelper.MethodCallAsString(step.DeclaringType.Name, step.Name);
 
+                        
                         var @params = new List<string>();
 
                         foreach (var arg in step.Resolve().Parameters)
                         {
-                            @params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest, this.unitTestsPath)));
+                            if (!ReflectionHelper.IsExtensionMethodFirstArgument(step, arg))
+                            {
+                                @params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest)));
+                            }
                         }
 
                         calledMethod = calledMethod + "(" + string.Join(",", @params) + ")";

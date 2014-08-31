@@ -22,34 +22,66 @@ namespace unitTestsParser
             return string.Format("{0}_{1}", originalClassName.Replace("`", "_"), originalMethodName.Replace(".", "_"));
         }
 
-        public static List<MethodReference> GetSequenceOfMethodCallsInsideMethod(MethodReference caller)
+        public static bool IsExtensionMethod(MethodDefinition md)
         {
-            var calls = new List<MethodReference>();
-
-            var textOutput = new AvalonEditTextOutput();
-            var metDef = caller.Resolve();
-            var context = new DecompilerContext(metDef.DeclaringType.Module) { CurrentType = metDef.DeclaringType };
-            var builder = new AstBuilder(context);
-            builder.AddMethod(metDef);
-            var syntaxTree = builder.SyntaxTree;
-            TransformationPipeline.RunTransformationsUntil(syntaxTree, null, context);
-
-            syntaxTree.AcceptVisitor(new InsertParenthesesVisitor { InsertParenthesesForReadability = true });
-            var outputFormatter = new TextOutputFormatter(textOutput) { FoldBraces = context.Settings.FoldBraces };
-            var formattingPolicy = context.Settings.CSharpFormattingOptions;
-            var visitor = new CSharpParameterCollectorVisitor(outputFormatter, formattingPolicy, new List<string>(), null, null);
-            syntaxTree.AcceptVisitor(visitor);
-
-
-            return visitor.VisitedMethods.ToList();
+            return md.CustomAttributes.Any(a => Type.GetType(a.AttributeType.FullName) == typeof(System.Runtime.CompilerServices.ExtensionAttribute));
         }
 
-
-        public static List<Tuple<string, List<String>>> ComputeMethodCalls(MethodDefinition callerMethod)
+        public static bool IsExtensionMethodFirstArgument(MethodReference mr, ParameterReference pr)
         {
-            var calls = new List<Tuple<string, List<String>>>();
+            if (IsExtensionMethod(mr.Resolve()) && pr.Index == 0)
+            {
+                return true;
+            }
 
-            return calls;
+            return false;
+        }
+
+        public static string ResolveParameterValue(ParameterReference pr, MethodReference callee, MethodDefinition caller)
+        {
+            
+            var context = new DecompilerContext(caller.DeclaringType.Module) { CurrentType = caller.DeclaringType };
+            var builder = new AstBuilder(context);
+            builder.AddMethod(caller);
+            var syntaxTree = builder.SyntaxTree;
+            TransformationPipeline.RunTransformationsUntil(syntaxTree, null, context);
+            syntaxTree.AcceptVisitor(new InsertParenthesesVisitor { InsertParenthesesForReadability = true });
+
+            var descs = syntaxTree.DescendantsAndSelf.ToList();
+            var nodes = descs.Where(n => n.Annotations.OfType<MethodReference>().Any(mr => mr.FullName.Equals(callee.FullName))).ToList();
+
+            bool isExtensionMethod = IsExtensionMethod(callee.Resolve());
+
+            foreach (var node in nodes)
+            {
+                var mr = node.Annotations.OfType<MethodReference>().Where(m => m.FullName.Equals(callee.FullName)).FirstOrDefault();
+
+                if (node.Parent is AssignmentExpression)
+                {
+                    var assign = node.Parent as AssignmentExpression;
+                
+                    if (mr != null)
+                    {
+                        if (mr.Resolve().Parameters.Any(p => p.Name.Equals(pr.Name)))
+                            return assign.Right.GetText();
+                    }
+                }
+
+                if (node is InvocationExpression)
+                {
+                    var inv = node as InvocationExpression;
+                    var index = pr.Index;
+
+                    if (isExtensionMethod) {
+                        index--;
+                    }
+
+                    return inv.Arguments.ToList()[index].GetText();
+                }
+            }
+
+
+            return string.Empty;
         }
     
     
