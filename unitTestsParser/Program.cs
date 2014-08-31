@@ -61,7 +61,7 @@ namespace unitTestsParser
             }
             else
             {
-                pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.dll";
+                pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
                 pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
                 clientLibPath = @"C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin";
             }
@@ -75,12 +75,12 @@ namespace unitTestsParser
 				return;
 			}
 
+            var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
+
+            tp.Parse();
+
+            
 			if (execMode == ExecutionMode.GenerateFiniteStateMachine) {
-				var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
-
-				tp.Parse();
-
-
 				foreach (var fsm in tp.GetClassesFiniteStateMachines())
 				{
 					Console.WriteLine(fsm);
@@ -88,10 +88,6 @@ namespace unitTestsParser
 			}
             
 			if (execMode == ExecutionMode.ModulePerClass) {
-				var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
-
-				tp.Parse();
-
 				foreach (var mod in tp.GenerateNuSMVModules())
 				{
 					Console.WriteLine(mod);
@@ -99,9 +95,6 @@ namespace unitTestsParser
 			}
 
 			if (execMode == ExecutionMode.ModulePerUnitTest) {
-				var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
-
-				tp.Parse();
 				foreach (var mod in tp.GenerateNuSMVModulesPerUnitTest()) {
 					Console.WriteLine (mod);
 				}

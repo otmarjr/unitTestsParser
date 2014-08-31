@@ -11,6 +11,8 @@ namespace unitTestsParser
 {
     public class TestsParser
     {
+        string unitTestsPath;
+        string libPath;
         public TestsParser(string unitTestsDllPath, string testedLibraryDllPath)
         {
             this.resolver = new DefaultAssemblyResolver();
@@ -22,6 +24,9 @@ namespace unitTestsParser
 
             this.unitTestsAssembly = AssemblyDefinition.ReadAssembly(unitTestsDllPath, new ReaderParameters() { AssemblyResolver = this.resolver});
             this.libraryAssembly = AssemblyDefinition.ReadAssembly(testedLibraryDllPath, new ReaderParameters() { AssemblyResolver = this.resolver });
+
+            this.unitTestsPath = unitTestsDllPath;
+            this.libPath = testedLibraryDllPath;
             
         }
 
@@ -50,12 +55,6 @@ namespace unitTestsParser
         public void Parse()
         {
             this.LoadUnitTestsEntryMethodsContainingAssertions();
-
-            foreach (var item in this.unitTestsMethods)
-            {
-                // Console.WriteLine(item.FullName);
-            }
-
             this.LoadTestedClasses();
         }
 
@@ -76,9 +75,10 @@ namespace unitTestsParser
             foreach (var md in this.unitTestsMethods)
             {
                 var methodBodyCalls = md.Body.Instructions.Cast<Instruction>().Where(i => ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference);
-                var assertions = md.Body.Instructions.Cast<Instruction>().Where(i => ReflectionHelper.IsMethodCall(i)).Select(i => i.Operand as MethodReference).Where(mr => IsAssertion(mr)).ToList();
+                var assertions = ReflectionHelper.GetSequenceOfMethodCallsInsideMethod(md);
                 var sequenceOfLibraryCalls
                     = methodBodyCalls.Except(assertions).Where(mr => mr.DeclaringType.Resolve().Module.FullyQualifiedName.Equals(this.libraryAssembly.MainModule.FullyQualifiedName)).ToList();
+
                 if (sequenceOfLibraryCalls.Count > 0 )
                     this.testSequences.Add(new TestCallSequence() { Sequence = sequenceOfLibraryCalls, Assertions = assertions, OriginalUnitTest = md });
             }   
@@ -191,7 +191,7 @@ namespace unitTestsParser
 					sb.Append (" )");
 
 					// sbSFM.AppendLine ("--Assertion: " + sb.ToString());		
-					sbSFM.AppendLine ("-- Assertion: " + ReflectionHelper.LogValues(assert.Resolve()));
+					// sbSFM.AppendLine ("-- Assertion: " + ReflectionHelper.LogValues(assert.Resolve()));
 				}
 
                 modules.Add(sbSFM.ToString());
@@ -323,40 +323,67 @@ namespace unitTestsParser
                 {
                     currentState = 1;
 
+                    var calls = ReflectionHelper.ComputeMethodCalls(unitTest.OriginalUnitTest);
+
                     foreach (var step in unitTest.Sequence)
                     {
-                        var newState = lastCreatedState + 1;
-                        lastCreatedState=newState;
-                        string calledMethod = step.FullName;
-						var transition = new Tuple<int, int, string> (currentState, newState, calledMethod); 
+                        string calledMethod = ReflectionHelper.MethodCallAsString(step.DeclaringType.Name, step.Name);
+
+                        var @params = new List<string>();
+
+                        foreach (var arg in step.Resolve().Parameters)
+                        {
+                            @params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest, this.unitTestsPath)));
+                        }
+
+                        calledMethod = calledMethod + "(" + string.Join(",", @params) + ")";
+
+                        int nextState;
+
+                        var targetState = transitions.Find(t => t.Item1 == currentState && t.Item3.Equals(calledMethod));
+
+                        if (targetState != null)
+                        {
+                            nextState = targetState.Item2;
+                        }
+                        else
+                        {
+                            nextState = lastCreatedState + 1;
+                            lastCreatedState = nextState;
+                            sbSFM.Append(", s" + nextState);
+                        }
+
+						var transition = new Tuple<int, int, string> (currentState, nextState, calledMethod); 
 
 						if (currentState == 1) {
-							transitionTests.Add (transition, unitTest);
+							transitionTests[transition] = unitTest;
 						}
 
 						transitions.Add(transition);
-                        currentState = newState;
+                        currentState = nextState;
+                        if (step.Equals(unitTest.Sequence.Last()))
+                        {
+                            acceptingStates.Add(nextState);
+                        }
                     }
-
-                    acceptingStates.Add(lastCreatedState);
                 }
 
                 sbSFM.Clear();
                 
                 sbSFM.AppendLine(string.Format("FSM {0} - {1}", currentMachine, group.Key));
-                sbSFM.Append("S = {");
-                sbSFM.Append(string.Join<int>(",",Enumerable.Range(1,lastCreatedState)));
+                sbSFM.Append("S = {s");
+                sbSFM.Append(string.Join<int>(",s",Enumerable.Range(1,lastCreatedState)));
                 sbSFM.Append("}");
                 sbSFM.Append(Environment.NewLine);
-                sbSFM.AppendLine("I={1}");
-                sbSFM.Append(string.Format("F = {{"));
-                sbSFM.Append(string.Join<int>(",", acceptingStates));
+                sbSFM.AppendLine("I={s1}");
+                sbSFM.Append(string.Format("F = {{s"));
+                sbSFM.Append(string.Join<int>(",s", acceptingStates));
                 sbSFM.Append("}");
                 sbSFM.Append(Environment.NewLine);
                 sbSFM.AppendLine("δ  = {");
 				transitions.ForEach(t => {
 					if (transitionTests.ContainsKey(t)) sbSFM.AppendLine("//Transitions originally in unit test : " + transitionTests[t].OriginalUnitTest.FullName);
-					sbSFM.AppendLine(string.Format("{0} -- {1} -- > {2}", t.Item1, t.Item3, t.Item2));
+					sbSFM.AppendLine(string.Format("s{0} --  called_method = {1} -- > s{2}", t.Item1, t.Item3, t.Item2));
 				});
                 sbSFM.AppendLine("}");
 
