@@ -53,17 +53,17 @@ namespace unitTestsParser
             string pacoteBiblioteca;
             string pacoteTestes;
             string clientLibPath;
-            if (Environment.OSVersion.Platform == PlatformID.MacOSX)
+			if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                 pacoteBiblioteca = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.dll";
-                 pacoteTestes = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.Test.dll";
-                 clientLibPath = "/Users/otmarpereira/Downloads/Cuyahoga-1.7.0-bin/bin";
+				pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
+				pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
+				clientLibPath = @"C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin";
             }
             else
             {
-                pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
-                pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
-                clientLibPath = @"C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin";
+				pacoteBiblioteca = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.dll";
+				pacoteTestes = @"/Users/otmarpereira/Documents/github-repos/nhibernate-core/src/NHibernate.Test/bin/Debug-2.0/NHibernate.Test.dll";
+				clientLibPath = "/Users/otmarpereira/Downloads/Cuyahoga-1.7.0-bin/bin";
             }
 
             string libName = "NHibernate";
@@ -95,12 +95,6 @@ namespace unitTestsParser
 			}
 
 			if (execMode == ExecutionMode.ModulePerUnitTest) {
-<<<<<<< Upstream, based on origin/master
-=======
-				var tp = new TestsParser(pacoteTestes, pacoteBiblioteca);
-
-				tp.Parse();
->>>>>>> 22111c4 comentários do teste unitário na geração de módulo por classe.
 				foreach (var mod in tp.GenerateNuSMVModulesPerUnitTest()) {
 					Console.WriteLine (mod);
 				}
