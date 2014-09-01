@@ -52,7 +52,7 @@ namespace unitTestsParser
 		{
 			List<string> sequence = new List<string>();
 
-			sequence.Add ("MODULE " + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name) + "()"); 
+			sequence.Add ("MODULE " + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name) + "_" + ReflectionHelper.MethodArgumentsSignature(method)  + "()"); 
 			sequence.Add ("-- Client method: " + method.DeclaringType.Namespace + "." + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name));
 			sequence.Add ("VAR lib_methods : {");
 			var methodCalls = new List<string> ();
@@ -118,10 +118,11 @@ namespace unitTestsParser
 					var spec = SequenceOfLibraryCallsMadeInsideMethod (m);
 
 					if (spec.Count > 0) {
-						ModulesInSequenceOfCalls.Add (ReflectionHelper.MethodCallAsString (m));
+						var argsSignatures = ReflectionHelper.MethodArgumentsSignature (m);
+						ModulesInSequenceOfCalls.Add (ReflectionHelper.MethodCallAsString (m) + "_" + argsSignatures);
 						calls.Add (SequenceOfLibraryCallsMadeInsideMethod (m));
 					} else {
-						calls.Add (new List<string>(){string.Format("--No calls to library found by method " + m.DeclaringType.Namespace + "." + m.DeclaringType.Name + "." + m.Name)});
+						// calls.Add (new List<string>(){string.Format("--No calls to library found by method " + m.DeclaringType.Namespace + "." + m.DeclaringType.Name + "." + m.Name)});
 					}
 				}
 			}

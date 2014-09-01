@@ -42,6 +42,16 @@ namespace unitTestsParser
 			return false;
 		}
 
+		public static string MethodArgumentsSignature(MethodReference m)
+		{
+			var argsSignatures = string.Empty;
+			var args = m.Resolve ().Parameters;
+			for (int i = 0; i < args.Count; ++i) {
+				argsSignatures += "arg_" + i + "_" + args[i].ParameterType.Name.Replace("`","_").Replace("[]","_arr_");
+			}
+
+			return argsSignatures;
+		}
 		public static string ResolveParameterValue(ParameterReference pr, MethodReference callee, MethodDefinition caller, int calleeOccurencePosition)
 		{
 			return pr.ParameterType.Name;
