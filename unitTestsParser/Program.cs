@@ -15,6 +15,7 @@ namespace unitTestsParser
 			ModulePerUnitTest,
 			ModulePerClass,
 			FormalSpecification,
+			SingleModule,
 			None
 		}
 
@@ -38,12 +39,15 @@ namespace unitTestsParser
 						return ExecutionMode.ModulePerClass;
 					case "s":
 						return ExecutionMode.FormalSpecification;
+					case "m":
+						return ExecutionMode.SingleModule;
 					}
 				}
 			}
 
 			return ExecutionMode.None;
 		}
+
     
         static void Main(string[] args)
         {
@@ -91,6 +95,18 @@ namespace unitTestsParser
 				foreach (var mod in tp.GenerateNuSMVModules())
 				{
 					Console.WriteLine(mod);
+				}
+			}
+
+			if (execMode == ExecutionMode.SingleModule) {
+				var argsList = new List<string> (args);
+				var index = argsList.IndexOf ("-m");
+				if (argsList.Count < index + 2)
+					Console.WriteLine ("To generate a single NuSMV module you must follow the m flag by the module name (example: -m m ClassA).");
+				else {
+					var className = argsList [index + 2];
+					var mod = tp.GenerateNuSMVModule (className);
+					Console.WriteLine (mod);
 				}
 			}
 

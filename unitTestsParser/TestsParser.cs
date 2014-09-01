@@ -194,11 +194,9 @@ namespace unitTestsParser
 			return modules;
 		}
 
-		public List<string> GenerateNuSMVModules()
+		public string GenerateNuSMVModule(string className)
 		{
-			var modules = new List<string> ();
-
-			var testsPerClass = this.testSequences.GroupBy(ts => ts.Sequence.First().DeclaringType.Name).ToList();
+			var testsPerClass = this.testSequences.Where(ts => ts.Sequence.First().DeclaringType.Name.Equals(className, StringComparison.InvariantCultureIgnoreCase)).GroupBy(ts => ts.Sequence.First ().DeclaringType.Name).ToList ();
 
 			var sbSFM = new StringBuilder();
 
@@ -218,6 +216,7 @@ namespace unitTestsParser
 				var transitionTests = new Dictionary<Tuple<int,int,string>, List<TestCallSequence>> ();
 				var transitionTestsCursor = new Dictionary<Tuple<int,int,string>, int> ();
 				var transtionMethods = new Dictionary<Tuple<int,int,string>, MethodDefinition> ();
+				var acceptingStatesTests = new Dictionary<int, List<TestCallSequence>> ();
 
 				foreach (var unitTest in group)
 				{
@@ -273,6 +272,11 @@ namespace unitTestsParser
 						if (step.Equals(unitTest.Sequence.Last()))
 						{
 							acceptingStates.Add(nextState);
+							if (!acceptingStatesTests.ContainsKey (nextState)) {
+								acceptingStatesTests.Add (nextState, new List<TestCallSequence> ());
+							} 
+
+							acceptingStatesTests [nextState].Add (unitTest);
 						}
 					}
 				}
@@ -300,7 +304,165 @@ namespace unitTestsParser
 						@params.Add(p.Name + ": " + p.ParameterType.Name);
 					}
 
-					sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2}; -- method parameters: {3}", t.Item3, t.Item1, t.Item2, string.Join(", ",@params)));
+					sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2}; -- method parameters: {3} method return type: {4}", t.Item3, t.Item1, t.Item2, string.Join(", ",@params), transtionMethods[t].ReturnType.Name));
+					bool isLastTransitionOfTest = false;
+
+					if (t.Equals (transitions.Last ())) {	
+						isLastTransitionOfTest = true;
+					} else {
+						var position = transitions.IndexOf(t);
+						var nextTransiton = transitions [position + 1];
+
+						if (nextTransiton.Item1 == 1) {
+							isLastTransitionOfTest = true;
+						}
+					}
+					if (acceptingStates.Contains (t.Item2) && isLastTransitionOfTest) {
+						foreach (var a in transitionTests[t][index].Assertions) {
+							@params.Clear ();
+							foreach (var p in a.Resolve().Parameters) {
+								@params.Add(p.Name + ": " + p.ParameterType.Name);
+							}
+							sbSFM.AppendLine	 (String.Format ("-- Assertion :  {0}.{1} ({2}) ", a.DeclaringType.Name, a.Name, string.Join(", ",@params) ));
+						}
+						transitionTestsCursor [t] += 1;
+					}
+				}
+				/*
+				foreach (var methodPaths in methodTransitions) {
+					foreach (var transition in methodPaths.Value) {
+						sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2};", methodPaths.Key, transition.Item1, transition.Item2));
+					}
+				}*/
+				sbSFM.AppendLine ("TRUE: state;");
+				sbSFM.AppendLine ("esac;");
+
+				sbSFM.AppendLine("DEFINE");
+				sbSFM.AppendLine("\tat_accepting_state := case");
+				foreach (var acs in acceptingStates)
+				{
+					sbSFM.AppendLine("\t\t state = s" + acs + " : TRUE; -- from unit test(s) " + string.Join(", ", acceptingStatesTests[acs].Select(ut => ReflectionHelper.MethodCallAsString(ut.OriginalUnitTest.DeclaringType.Name, ut.OriginalUnitTest.Name)).ToList()));
+				}
+
+				sbSFM.AppendLine("\t\t TRUE: FALSE; -- By default, not at accepting state.");
+				sbSFM.AppendLine("esac;");
+			}
+
+			return sbSFM.ToString ();
+		}
+		public List<string> GenerateNuSMVModules()
+		{
+			var modules = new List<string> ();
+
+			var testsPerClass = this.testSequences.GroupBy(ts => ts.Sequence.First().DeclaringType.Name).ToList();
+
+			var sbSFM = new StringBuilder();
+
+			var methodTransitions = new Dictionary<string, List<Tuple<int,int>>> ();
+			var existingMethods = new List<string> ();
+			foreach (var group in testsPerClass) 
+			{
+				var @class = group.Key;
+				var currentState = 1;
+				var lastCreatedState = currentState;
+				var transitions = new List<Tuple<int, int, string>>();
+				var acceptingStates = new List<int>();
+
+				sbSFM.Clear ();
+				sbSFM.AppendLine (string.Format("MODULE {0} (called_method)", @class.Replace("`", "_")));
+				sbSFM.AppendLine("\tVAR state : { s1");
+				var transitionTests = new Dictionary<Tuple<int,int,string>, List<TestCallSequence>> ();
+				var transitionTestsCursor = new Dictionary<Tuple<int,int,string>, int> ();
+				var transtionMethods = new Dictionary<Tuple<int,int,string>, MethodDefinition> ();
+				var acceptingStatesTests = new Dictionary<int, List<TestCallSequence>> ();
+
+				foreach (var unitTest in group)
+				{
+					currentState = 1;
+
+					foreach (var step in unitTest.Sequence)
+					{
+						var classOfFirstMethodInTheSequence = unitTest.Sequence.First ().DeclaringType.Name;
+
+						if (!classOfFirstMethodInTheSequence.Equals (@class))
+							continue;
+
+						string calledMethod = string.Format("{0}_{1}",step.DeclaringType.Name.Replace("`", "_"), step.Name.Replace(".","_"));
+
+						int nextState;
+
+						var targetState = transitions.Find(t => t.Item1 == currentState && t.Item3.Equals(calledMethod));
+
+						if (targetState != null)
+						{
+							nextState = targetState.Item2;
+						}
+						else
+						{
+							nextState = lastCreatedState + 1;
+							lastCreatedState = nextState;
+							sbSFM.Append(", s" + nextState);
+							if (!methodTransitions.ContainsKey(calledMethod))
+							{
+								methodTransitions[calledMethod] = new List<Tuple<int, int>>();
+							}
+							methodTransitions[calledMethod].Add(new Tuple<int, int>(currentState, nextState));
+						}
+
+						var transition = new Tuple<int, int, string> (currentState, nextState, calledMethod); 
+						transitions.Add(transition);
+						if (!existingMethods.Contains (calledMethod))
+							existingMethods.Add (calledMethod);
+
+						currentState = nextState;
+
+						if (!transitionTests.ContainsKey (transition)) {
+							transitionTests.Add (transition, new List<TestCallSequence> ());
+							transitionTestsCursor.Add (transition, 0);
+						}
+
+						if (!transtionMethods.ContainsKey (transition)) 
+						{
+							transtionMethods.Add (transition, step.Resolve ());
+						}
+
+						transitionTests[transition].Add(unitTest);
+						if (step.Equals(unitTest.Sequence.Last()))
+						{
+							acceptingStates.Add(nextState);
+							if (!acceptingStatesTests.ContainsKey (nextState)) {
+								acceptingStatesTests.Add (nextState, new List<TestCallSequence> ());
+							} 
+
+							acceptingStatesTests [nextState].Add (unitTest);
+						}
+					}
+				}
+
+				sbSFM.Append ("};");
+				sbSFM.AppendLine ();
+				sbSFM.AppendLine(string.Format("-- accepting states: s{0}", string.Join(", s",acceptingStates)));
+				sbSFM.Append ("methods: {");
+				sbSFM.Append (string.Join (",", existingMethods));
+				sbSFM.AppendLine ("} ;");
+				sbSFM.AppendLine ("ASSIGN");
+				sbSFM.AppendLine ("init(state) := s1;");
+				sbSFM.AppendLine ("next(state) := case ");
+
+
+				foreach (var t in transitions) {
+					var index = transitionTestsCursor [t];
+					if (t.Item1 == 1) {
+						var test = transitionTests [t][index].OriginalUnitTest;
+						sbSFM.AppendLine (String.Format ("--Calls made in test : {0}", ReflectionHelper.MethodCallAsString(test.DeclaringType.Name, test.Name)));
+					}
+
+					var @params = new List<String> ();
+					foreach (var p in transtionMethods[t].Parameters) {
+						@params.Add(p.Name + ": " + p.ParameterType.Name);
+					}
+
+					sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2}; -- method parameters: {3} method return type: {4}", t.Item3, t.Item1, t.Item2, string.Join(", ",@params), transtionMethods[t].ReturnType.Name));
 					if (acceptingStates.Contains (t.Item2)) {
 						foreach (var a in transitionTests[t][index].Assertions) {
 							@params.Clear ();
@@ -325,7 +487,7 @@ namespace unitTestsParser
 				sbSFM.AppendLine("\tat_accepting_state := case");
 				foreach (var acs in acceptingStates)
 				{
-					sbSFM.AppendLine("\t\t state = s" + acs + " : TRUE;");
+					sbSFM.AppendLine("\t\t state = s" + acs + " : TRUE; -- from unit test(s) " + string.Join(", ", acceptingStatesTests[acs].Select(ut => ReflectionHelper.MethodCallAsString(ut.OriginalUnitTest.DeclaringType.Name, ut.OriginalUnitTest.Name)).ToList()));
 				}
 
 				sbSFM.AppendLine("\t\t TRUE: FALSE; -- By default, not at accepting state.");
@@ -429,7 +591,7 @@ namespace unitTestsParser
 				sbSFM.Append(Environment.NewLine);
 				sbSFM.AppendLine("δ  = {");
 				transitions.ForEach(t => {
-					if (transitionTests.ContainsKey(t)) sbSFM.AppendLine("//Transitions originally in unit test : " + transitionTests[t].OriginalUnitTest.FullName);
+					if (transitionTests.ContainsKey(t)) sbSFM.AppendLine("//Transitions originally in unit test(s) : " + transitionTests[t].OriginalUnitTest.FullName);
 					sbSFM.AppendLine(string.Format("s{0} --  called_method = {1} -- > s{2}", t.Item1, t.Item3, t.Item2));
 				});
 				sbSFM.AppendLine("}");
