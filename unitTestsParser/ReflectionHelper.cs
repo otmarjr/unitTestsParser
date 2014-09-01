@@ -22,6 +22,11 @@ namespace unitTestsParser
 			return string.Format("{0}_{1}", originalClassName.Replace("`", "_"), originalMethodName.Replace(".", "_"));
 		}
 
+		public static string MethodCallAsString(MethodReference m)
+		{
+			return MethodCallAsString (m.DeclaringType.Name, m.Name);
+		}
+
 		public static bool IsExtensionMethod(MethodDefinition md)
 		{
 			return md.CustomAttributes.Any(a => Type.GetType(a.AttributeType.FullName) == typeof(System.Runtime.CompilerServices.ExtensionAttribute));

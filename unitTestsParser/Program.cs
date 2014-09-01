@@ -120,12 +120,18 @@ namespace unitTestsParser
 				var cp = new ClientLibraryParser (clientLibPath, libName);
 				var formalSpecs = cp.GetSequenceOfCalls ();
 
-				int cont_sepc = 1;
 				foreach (var spec in formalSpecs) {
-					Console.WriteLine ("=>Spec " + cont_sepc++);
 					foreach (var call in spec) {
-						Console.WriteLine ("\t" + call);
+						Console.WriteLine (call);
 					}
+				}
+
+				int contTests = 0;
+
+				Console.WriteLine ("MODULE main");
+				Console.WriteLine ("\t VAR ");
+				foreach (var mod in cp.ModulesInSequenceOfCalls) {
+					Console.WriteLine (String.Format ("\t \t test{0}_{1} : {1}();", ++contTests, mod));
 				}
 			}
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Mono.Cecil;
+using System.Linq;
 
 namespace unitTestsParser
 {
@@ -51,19 +52,52 @@ namespace unitTestsParser
 		{
 			List<string> sequence = new List<string>();
 
-			sequence.Add ("Client method: " + method.DeclaringType.Namespace + "." + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name));
+			sequence.Add ("MODULE " + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name) + "()"); 
+			sequence.Add ("-- Client method: " + method.DeclaringType.Namespace + "." + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name));
+			sequence.Add ("VAR lib_methods : {");
+			var methodCalls = new List<string> ();
+			var moduleName = string.Empty;
+
 			foreach (var inst in method.Body.Instructions) {
 				if (ReflectionHelper.IsMethodCall (inst)) {
 					var mr = inst.Operand as MethodReference;
 
 					if (mr.DeclaringType.Namespace.StartsWith (this.targetPackage, StringComparison.InvariantCultureIgnoreCase)) {
-						sequence.Add (ReflectionHelper.MethodCallAsString (mr.DeclaringType.Name, mr.Name));
+						methodCalls.Add (ReflectionHelper.MethodCallAsString (mr.DeclaringType.Name, mr.Name));
+
+						if (moduleName.Equals (string.Empty)) {
+							moduleName = mr.DeclaringType.Name;
+						}
 					}
 				}
 			}
 
+			if (methodCalls.Count == 0)
+				return new List<string> ();
+
+			sequence.Add (string.Join (",", methodCalls));
+			sequence.Add ("};");
+			sequence.Add ("\t instance : " + moduleName + "(lib_methods);");
+			sequence.Add ("ASSIGN");
+			sequence.Add ("\t init(lib_methods) := " + methodCalls.First () + ";"); 
+			sequence.Add ("\t next(lib_methods) := case ");
+
+			var lastCall = methodCalls.First ();
+
+			foreach (var call in methodCalls.Skip(1)) {
+				sequence.Add ("\t\t lib_methods = " + lastCall + " : " + call + ";");
+				lastCall = call;
+			}
+
+			sequence.Add ("\t\t TRUE: lib_methods;");
+			sequence.Add ("\t esac;");
+			sequence.Add ("SPEC EF (instance.at_accepting_state = TRUE)");
+				
+
 			return sequence;
 		}
+
+		public List<String> ModulesInSequenceOfCalls = new List<String>();
 
 		public List<List<string>> GetSequenceOfCalls()
 		{
@@ -81,7 +115,14 @@ namespace unitTestsParser
 			foreach (var dep in targetLibDependentAssemblies) {
 				var methodsInstantiatingLibraryVaribles = this.GetMethodsInstantiatingLibraryVariables (dep);
 				foreach (var m in methodsInstantiatingLibraryVaribles) {
-					calls.Add (SequenceOfLibraryCallsMadeInsideMethod (m));
+					var spec = SequenceOfLibraryCallsMadeInsideMethod (m);
+
+					if (spec.Count > 0) {
+						ModulesInSequenceOfCalls.Add (ReflectionHelper.MethodCallAsString (m));
+						calls.Add (SequenceOfLibraryCallsMadeInsideMethod (m));
+					} else {
+						calls.Add (new List<string>(){string.Format("--No calls to library found by method " + m.DeclaringType.Namespace + "." + m.DeclaringType.Name + "." + m.Name)});
+					}
 				}
 			}
 
