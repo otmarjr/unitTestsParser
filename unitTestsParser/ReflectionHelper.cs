@@ -37,7 +37,7 @@ namespace unitTestsParser
             return false;
         }
 
-        public static string ResolveParameterValue(ParameterReference pr, MethodReference callee, MethodDefinition caller)
+        public static string ResolveParameterValue(ParameterReference pr, MethodReference callee, MethodDefinition caller, int calleeOccurencePosition)
         {
             
             var context = new DecompilerContext(caller.DeclaringType.Module) { CurrentType = caller.DeclaringType };
@@ -48,36 +48,62 @@ namespace unitTestsParser
             syntaxTree.AcceptVisitor(new InsertParenthesesVisitor { InsertParenthesesForReadability = true });
 
             var descs = syntaxTree.DescendantsAndSelf.ToList();
-            var nodes = descs.Where(n => n.Annotations.OfType<MethodReference>().Any(mr => mr.FullName.Equals(callee.FullName))).ToList();
+            var nodes = descs.Where(n => n.Annotations.OfType<MethodReference>().Any(m => m.FullName.Equals(callee.FullName))).ToList();
+
+            
+            
+            if (nodes.Count == 0)
+            {
+                var membersNode = descs.OfType<MemberReferenceExpression>().ToList();
+                var methods = descs.OfType<InvocationExpression>().ToList();
+                var descsWithSameName = descs.Where(d => d.ToString().IndexOf(callee.Name) >= 0).ToList();
+
+                if (descsWithSameName.Count == 1)
+                    return descsWithSameName[0].GetText();
+                else
+                {
+                    if (pr.ParameterType.Namespace.StartsWith("System.Linq.Expressions"))
+                    {
+                        var matchDesc = descs.Where(d => d.GetText().StartsWith(callee.Name, StringComparison.InvariantCultureIgnoreCase)).ToList();
+
+                        return matchDesc.First().GetText().Replace(pr.Name, string.Empty);
+                    }
+                    else
+                    {
+                        return pr.ParameterType.ToString();
+                    }
+                }
+            }
+
 
             bool isExtensionMethod = IsExtensionMethod(callee.Resolve());
 
-            foreach (var node in nodes)
+
+            var node = nodes[calleeOccurencePosition];
+            var mr = node.Annotations.OfType<MethodReference>().Where(m => m.FullName.Equals(callee.FullName)).FirstOrDefault();
+
+            if (node.Parent is AssignmentExpression)
             {
-                var mr = node.Annotations.OfType<MethodReference>().Where(m => m.FullName.Equals(callee.FullName)).FirstOrDefault();
+                var assign = node.Parent as AssignmentExpression;
 
-                if (node.Parent is AssignmentExpression)
+                if (mr != null)
                 {
-                    var assign = node.Parent as AssignmentExpression;
-                
-                    if (mr != null)
-                    {
-                        if (mr.Resolve().Parameters.Any(p => p.Name.Equals(pr.Name)))
-                            return assign.Right.GetText();
-                    }
+                    if (mr.Resolve().Parameters.Any(p => p.Name.Equals(pr.Name)))
+                        return assign.Right.GetText();
+                }
+            }
+
+            if (node is InvocationExpression)
+            {
+                var inv = node as InvocationExpression;
+                var index = pr.Index;
+
+                if (isExtensionMethod)
+                {
+                    index--;
                 }
 
-                if (node is InvocationExpression)
-                {
-                    var inv = node as InvocationExpression;
-                    var index = pr.Index;
-
-                    if (isExtensionMethod) {
-                        index--;
-                    }
-
-                    return inv.Arguments.ToList()[index].GetText();
-                }
+                return inv.Arguments.ToList()[index].GetText();
             }
 
 

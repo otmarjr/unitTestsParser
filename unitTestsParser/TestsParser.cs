@@ -323,20 +323,29 @@ namespace unitTestsParser
                 {
                     currentState = 1;
 
-                    foreach (var step in unitTest.Sequence)
+                    Dictionary<string, int> methodReferenceOccurences = new Dictionary<string, int>();
+
+                    for (int i =0;i<unitTest.Sequence.Count;++i)
                     {
+                        var step = unitTest.Sequence[i];
+
                         string calledMethod = ReflectionHelper.MethodCallAsString(step.DeclaringType.Name, step.Name);
 
-                        
-                        var @params = new List<string>();
-
-                        foreach (var arg in step.Resolve().Parameters)
+                        if (!methodReferenceOccurences.ContainsKey(step.FullName))
                         {
+                            methodReferenceOccurences.Add(step.FullName, 0);
+                        }
+
+                        var @params = new List<string>();
+                        foreach (var arg in step.Resolve().Parameters)
+                        {   
                             if (!ReflectionHelper.IsExtensionMethodFirstArgument(step, arg))
                             {
-                                @params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest)));
+                                @params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest, methodReferenceOccurences[step.FullName])));
                             }
                         }
+
+                        methodReferenceOccurences[step.FullName] += 1;
 
                         calledMethod = calledMethod + "(" + string.Join(",", @params) + ")";
 
@@ -363,9 +372,62 @@ namespace unitTestsParser
 
 						transitions.Add(transition);
                         currentState = nextState;
-                        if (step.Equals(unitTest.Sequence.Last()))
+                    }
+
+
+                    for (int i = 0; i < unitTest.Assertions.Count; i++)
+                    {
+                        var step = unitTest.Assertions[i];
+
+                        string calledMethod = ReflectionHelper.MethodCallAsString(step.DeclaringType.Name, step.Name);
+
+                        if (!methodReferenceOccurences.ContainsKey(step.FullName))
                         {
-                            acceptingStates.Add(nextState);
+                            methodReferenceOccurences.Add(step.FullName, 0);
+                        }
+
+                        var @params = new List<string>();
+
+                        foreach (var arg in step.Resolve().Parameters)
+                        {
+                            if (!ReflectionHelper.IsExtensionMethodFirstArgument(step, arg))
+                            {
+                                @params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest, methodReferenceOccurences[step.FullName])));
+                            }
+                        }
+
+                        methodReferenceOccurences[step.FullName] += 1;
+
+                        calledMethod = calledMethod + "(" + string.Join(",", @params) + ")";
+
+                        int nextState;
+
+                        var targetState = transitions.Find(t => t.Item1 == currentState && t.Item3.Equals(calledMethod));
+
+                        if (targetState != null)
+                        {
+                            nextState = targetState.Item2;
+                        }
+                        else
+                        {
+                            nextState = lastCreatedState + 1;
+                            lastCreatedState = nextState;
+                            sbSFM.Append(", s" + nextState);
+                        }
+
+                        var transition = new Tuple<int, int, string>(currentState, nextState, calledMethod);
+
+                        if (currentState == 1)
+                        {
+                            transitionTests[transition] = unitTest;
+                        }
+
+                        transitions.Add(transition);
+                        currentState = nextState;
+
+                        if (i == unitTest.Assertions.Count - 1)
+                        {
+                            acceptingStates.Add(currentState);
                         }
                     }
                 }
