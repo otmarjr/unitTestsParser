@@ -99,7 +99,7 @@ namespace unitTestsParser
 
 		public List<String> ModulesInSequenceOfCalls = new List<String>();
 
-		public List<List<string>> GetSequenceOfCalls()
+		public List<List<string>> GetSequenceOfCalls(string modulesSMVFile)
 		{
 			var calls = new List<List<string>>();
 			// Sequence of calls inside a single method!

@@ -117,8 +117,23 @@ namespace unitTestsParser
 			}
 
 			if (execMode == ExecutionMode.FormalSpecification) {
+                var argsList = new List<string>(args);
+                var index = argsList.IndexOf("-m");
+                if (argsList.Count < index + 2)
+                {
+                    Console.WriteLine("To generate the formal specification file, you must supply the nusmv modules file after the 's' flag.(example: -m s modules.smv).");
+                    return;
+                }
+
+                var modulesPath = argsList[index + 2];
+
+                if (!System.IO.File.Exists(modulesPath))
+                {
+                    Console.WriteLine("Could not locate file at path '{0}'.", modulesPath);
+                    return;
+                }
 				var cp = new ClientLibraryParser (clientLibPath, libName);
-				var formalSpecs = cp.GetSequenceOfCalls ();
+				var formalSpecs = cp.GetSequenceOfCalls (modulesPath);
 
 				foreach (var spec in formalSpecs) {
 					foreach (var call in spec) {

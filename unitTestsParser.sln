@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio Express 2013 for Windows Desktop
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "unitTestsParser", "unitTestsParser\unitTestsParser.csproj", "{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}"
@@ -9,22 +9,46 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		net_2_0_Debug|Any CPU = net_2_0_Debug|Any CPU
+		net_2_0_Debug|x64 = net_2_0_Debug|x64
+		net_2_0_Debug|x86 = net_2_0_Debug|x86
+		net_2_0_Release|Any CPU = net_2_0_Release|Any CPU
+		net_2_0_Release|x64 = net_2_0_Release|x64
+		net_2_0_Release|x86 = net_2_0_Release|x86
+		net_3_5_Debug|Any CPU = net_3_5_Debug|Any CPU
+		net_3_5_Debug|x64 = net_3_5_Debug|x64
+		net_3_5_Debug|x86 = net_3_5_Debug|x86
+		net_3_5_Release|Any CPU = net_3_5_Release|Any CPU
+		net_3_5_Release|x64 = net_3_5_Release|x64
+		net_3_5_Release|x86 = net_3_5_Release|x86
+		net_4_0_Debug|Any CPU = net_4_0_Debug|Any CPU
+		net_4_0_Debug|x64 = net_4_0_Debug|x64
+		net_4_0_Debug|x86 = net_4_0_Debug|x86
+		net_4_0_Release|Any CPU = net_4_0_Release|Any CPU
+		net_4_0_Release|x64 = net_4_0_Release|x64
+		net_4_0_Release|x86 = net_4_0_Release|x86
+		net_4_5_Debug|Any CPU = net_4_5_Debug|Any CPU
+		net_4_5_Debug|x64 = net_4_5_Debug|x64
+		net_4_5_Debug|x86 = net_4_5_Debug|x86
+		net_4_5_Release|Any CPU = net_4_5_Release|Any CPU
+		net_4_5_Release|x64 = net_4_5_Release|x64
+		net_4_5_Release|x86 = net_4_5_Release|x86
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
-		net_2_0_Debug|Any CPU = net_2_0_Debug|Any CPU
-		net_2_0_Release|Any CPU = net_2_0_Release|Any CPU
-		net_3_5_Debug|Any CPU = net_3_5_Debug|Any CPU
-		net_3_5_Release|Any CPU = net_3_5_Release|Any CPU
-		net_4_0_Debug|Any CPU = net_4_0_Debug|Any CPU
-		net_4_0_Release|Any CPU = net_4_0_Release|Any CPU
-		silverlight_Debug|Any CPU = silverlight_Debug|Any CPU
-		silverlight_Release|Any CPU = silverlight_Release|Any CPU
-		winphone_Debug|Any CPU = winphone_Debug|Any CPU
-		winphone_Release|Any CPU = winphone_Release|Any CPU
-		Debug|x86 = Debug|x86
 		Release|x86 = Release|x86
-		net_4_5_Debug|Any CPU = net_4_5_Debug|Any CPU
-		net_4_5_Release|Any CPU = net_4_5_Release|Any CPU
+		silverlight_Debug|Any CPU = silverlight_Debug|Any CPU
+		silverlight_Debug|x64 = silverlight_Debug|x64
+		silverlight_Debug|x86 = silverlight_Debug|x86
+		silverlight_Release|Any CPU = silverlight_Release|Any CPU
+		silverlight_Release|x64 = silverlight_Release|x64
+		silverlight_Release|x86 = silverlight_Release|x86
+		winphone_Debug|Any CPU = winphone_Debug|Any CPU
+		winphone_Debug|x64 = winphone_Debug|x64
+		winphone_Debug|x86 = winphone_Debug|x86
+		winphone_Release|Any CPU = winphone_Release|Any CPU
+		winphone_Release|x64 = winphone_Release|x64
+		winphone_Release|x86 = winphone_Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -35,20 +59,36 @@ Global
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.Debug|x86.Build.0 = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Debug|x64.ActiveCfg = Debug|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Debug|x86.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Release|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Release|x64.ActiveCfg = Release|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_2_0_Release|x86.ActiveCfg = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Debug|x64.ActiveCfg = Debug|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Debug|x86.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Release|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Release|x64.ActiveCfg = Release|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_3_5_Release|x86.ActiveCfg = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Debug|x64.ActiveCfg = Debug|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Debug|x86.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Release|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Release|x64.ActiveCfg = Release|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_0_Release|x86.ActiveCfg = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Debug|x64.ActiveCfg = Debug|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Debug|x86.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Release|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Release|x64.ActiveCfg = Release|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.net_4_5_Release|x86.ActiveCfg = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.Release|x64.ActiveCfg = Release|x64
@@ -57,17 +97,25 @@ Global
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.Release|x86.Build.0 = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Debug|x64.ActiveCfg = Debug|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Debug|x86.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Release|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Release|x64.ActiveCfg = Release|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.silverlight_Release|x86.ActiveCfg = Release|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Debug|x64.ActiveCfg = Debug|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Debug|x86.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Release|Any CPU.Build.0 = Debug|Any CPU
-	EndGlobalSection
-	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = unitTestsParser\unitTestsParser.csproj
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Release|x64.ActiveCfg = Release|x64
+		{FE04EC4C-3FC1-4268-A96E-60BC318AB9C5}.winphone_Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = unitTestsParser\unitTestsParser.csproj
 	EndGlobalSection
 EndGlobal
