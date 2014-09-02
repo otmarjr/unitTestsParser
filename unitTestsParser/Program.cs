@@ -135,6 +135,9 @@ namespace unitTestsParser
 				var cp = new ClientLibraryParser (clientLibPath, libName);
 				var formalSpecs = cp.GetSequenceOfCalls (modulesPath);
 
+				var nusmvLibSpecLines = new List<String>(System.IO.File.ReadAllLines (modulesPath));
+
+				nusmvLibSpecLines.ForEach (l => Console.WriteLine (l));
 				foreach (var spec in formalSpecs) {
 					foreach (var call in spec) {
 						Console.WriteLine (call);

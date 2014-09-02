@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Mono.Cecil;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace unitTestsParser
 {
@@ -48,13 +49,16 @@ namespace unitTestsParser
 			return methods;
 		}
 
+		private List<string> ModulesUsedWithoutSpecification = new List<String> ();
+		private List<List<String>> SequenceOfModulesWithouSpecification = new List<List<String>> ();
+
 		private List<string> SequenceOfLibraryCallsMadeInsideMethod(MethodDefinition method)
 		{
 			List<string> sequence = new List<string>();
 
 			sequence.Add ("MODULE " + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name) + "_" + ReflectionHelper.MethodArgumentsSignature(method)  + "()"); 
 			sequence.Add ("-- Client method: " + method.DeclaringType.Namespace + "." + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name));
-			sequence.Add ("VAR lib_methods : {");
+			sequence.Add ("VAR lib_methods : {dummy,");
 			var methodCalls = new List<string> ();
 			var moduleName = string.Empty;
 
@@ -71,11 +75,16 @@ namespace unitTestsParser
 					}
 				}
 			}
+			bool moduleHasSpecification = true;
+
+			if (existingLibraryModulesInNusmvFile.Find (m => m.Equals (moduleName)) == null) {
+				moduleHasSpecification = false;
+			}
 
 			if (methodCalls.Count == 0)
 				return new List<string> ();
 
-			sequence.Add (string.Join (",", methodCalls));
+			sequence.Add (string.Join (",", methodCalls.Distinct()));
 			sequence.Add ("};");
 			sequence.Add ("\t instance : " + moduleName + "(lib_methods);");
 			sequence.Add ("ASSIGN");
@@ -93,14 +102,36 @@ namespace unitTestsParser
 			sequence.Add ("\t esac;");
 			sequence.Add ("SPEC EF (instance.at_accepting_state = TRUE)");
 				
+			if (!moduleHasSpecification) {
+				SequenceOfModulesWithouSpecification.Add (sequence);
+				ModulesUsedWithoutSpecification.Add (moduleName);
+				return new List<string> ();
+			}
 
 			return sequence;
 		}
 
 		public List<String> ModulesInSequenceOfCalls = new List<String>();
 
+		private List<String> existingLibraryModulesInNusmvFile = new List<string>();
+
+		private void LoadExistingLibraryModulesInNuSmvFile(string nusmvFile)
+		{
+			var moduleDeclarationPattern = new Regex (@"^MODULE (?<module_name>\w.+\s).+$");
+
+			var fileLines = System.IO.File.ReadLines (nusmvFile);
+
+			foreach (var line in fileLines) {
+				foreach (Match m in moduleDeclarationPattern.Matches(line)) {
+					var moduleName = m.Groups ["module_name"].Value;
+					existingLibraryModulesInNusmvFile.Add (moduleName.Trim());
+				}
+			}
+		}
+
 		public List<List<string>> GetSequenceOfCalls(string modulesSMVFile)
 		{
+			this.LoadExistingLibraryModulesInNuSmvFile (modulesSMVFile);
 			var calls = new List<List<string>>();
 			// Sequence of calls inside a single method!
 			List<AssemblyDefinition> targetLibDependentAssemblies = new List<AssemblyDefinition> ();
