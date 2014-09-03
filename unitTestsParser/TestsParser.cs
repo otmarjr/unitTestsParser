@@ -539,7 +539,7 @@ namespace unitTestsParser
 						{   
 							if (!ReflectionHelper.IsExtensionMethodFirstArgument(step, arg))
 							{
-								@params.Add(string.Format("{0} = {1}", arg.Name, ReflectionHelper.ResolveParameterValue(arg, step, unitTest.OriginalUnitTest, methodReferenceOccurences[step.FullName])));
+								@params.Add(string.Format("{0} : {1}", arg.Name, arg.Resolve().ParameterType.Name));
 							}
 						}
 

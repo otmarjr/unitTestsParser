@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Mono.Cecil;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.CodeDom;
 
 namespace unitTestsParser
 {
@@ -62,19 +63,19 @@ namespace unitTestsParser
 			var methodCalls = new List<string> ();
 			var moduleName = string.Empty;
 
-			foreach (var inst in method.Body.Instructions) {
+            foreach (var inst in method.Body.Instructions) {
 				if (ReflectionHelper.IsMethodCall (inst)) {
 					var mr = inst.Operand as MethodReference;
-
 					if (mr.DeclaringType.Namespace.StartsWith (this.targetPackage, StringComparison.InvariantCultureIgnoreCase)) {
-						methodCalls.Add (ReflectionHelper.MethodCallAsString (mr.DeclaringType.Name, mr.Name));
-
+                        var methodCall = ReflectionHelper.MethodCallAsString (mr.DeclaringType.Name, mr.Name);
+						methodCalls.Add (methodCall);
 						if (moduleName.Equals (string.Empty)) {
 							moduleName = mr.DeclaringType.Name;
 						}
 					}
 				}
 			}
+
 			bool moduleHasSpecification = true;
 
 			if (existingLibraryModulesInNusmvFile.Find (m => m.Equals (moduleName)) == null) {
@@ -84,8 +85,13 @@ namespace unitTestsParser
 			if (methodCalls.Count == 0)
 				return new List<string> ();
 
-			sequence.Add (string.Join (",", methodCalls.Distinct()));
+            sequence.Add (string.Join (",", methodCalls.Distinct()));
 			sequence.Add ("};");
+
+
+            var ast = ReflectionHelper.MSILtoCSharpConverter.ToAST(method);
+            var if_blocks = ast.Statements.Cast<CodeStatement>().OfType<CodeConditionStatement>().Where(cond => cond.FalseStatements.Count > 0 && cond.TrueStatements.Count > 0).ToList();
+
 			sequence.Add ("\t instance : " + moduleName + "(lib_methods);");
 			sequence.Add ("ASSIGN");
 			sequence.Add ("\t init(lib_methods) := " + methodCalls.First () + ";"); 
@@ -136,8 +142,11 @@ namespace unitTestsParser
 			// Sequence of calls inside a single method!
 			List<AssemblyDefinition> targetLibDependentAssemblies = new List<AssemblyDefinition> ();
 
+            var resolver = new DefaultAssemblyResolver();
+            resolver.AddSearchDirectory(this.basePath);
+
 			foreach (var dllFile in System.IO.Directory.GetFiles(this.basePath, "*.dll")) {
-				var asm = AssemblyDefinition.ReadAssembly (dllFile);
+                var asm = AssemblyDefinition.ReadAssembly(dllFile, new ReaderParameters() { AssemblyResolver = resolver });
 				if (this.AssemblyIsDependentOnTargetPackage (asm)) {
 					targetLibDependentAssemblies.Add (asm);
 				}
