@@ -50,14 +50,16 @@ namespace unitTestsParser
 			return methods;
 		}
 
-		private List<string> ModulesUsedWithoutSpecification = new List<String> ();
+		public List<string> ModulesUsedWithoutSpecification = new List<String> ();
+        public List<string> ModulesUsedWithSpecification = new List<String>();
 		private List<List<String>> SequenceOfModulesWithouSpecification = new List<List<String>> ();
 
 		private List<string> SequenceOfLibraryCallsMadeInsideMethod(MethodDefinition method)
 		{
 			List<string> sequence = new List<string>();
 
-			sequence.Add ("MODULE " + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name) + "_" + ReflectionHelper.MethodArgumentsSignature(method)  + "()"); 
+            var clientName = ReflectionHelper.MethodCallAsString(method.DeclaringType.Name, method.Name) + "_" + ReflectionHelper.MethodArgumentsSignature(method);
+			sequence.Add ("MODULE " +  clientName + "()"); 
 			sequence.Add ("-- Client method: " + method.DeclaringType.Namespace + "." + ReflectionHelper.MethodCallAsString (method.DeclaringType.Name, method.Name));
 			sequence.Add ("VAR lib_methods : {dummy,");
 			var methodCalls = new List<string> ();
@@ -88,10 +90,6 @@ namespace unitTestsParser
             sequence.Add (string.Join (",", methodCalls.Distinct()));
 			sequence.Add ("};");
 
-
-            var ast = ReflectionHelper.MSILtoCSharpConverter.ToAST(method);
-            var if_blocks = ast.Statements.Cast<CodeStatement>().OfType<CodeConditionStatement>().Where(cond => cond.FalseStatements.Count > 0 && cond.TrueStatements.Count > 0).ToList();
-
 			sequence.Add ("\t instance : " + moduleName + "(lib_methods);");
 			sequence.Add ("ASSIGN");
 			sequence.Add ("\t init(lib_methods) := " + methodCalls.First () + ";"); 
@@ -107,19 +105,32 @@ namespace unitTestsParser
 			sequence.Add ("\t\t TRUE: lib_methods;");
 			sequence.Add ("\t esac;");
 			sequence.Add ("SPEC EF (instance.at_accepting_state = TRUE)");
-				
-			if (!moduleHasSpecification) {
-				SequenceOfModulesWithouSpecification.Add (sequence);
-				ModulesUsedWithoutSpecification.Add (moduleName);
-				return new List<string> ();
-			}
 
+            if (!moduleHasSpecification)
+            {
+                SequenceOfModulesWithouSpecification.Add(sequence);
+                ModulesUsedWithoutSpecification.Add(moduleName);
+                if (!this.ClassesWithoutSpecificationClients.ContainsKey(moduleName))
+                {
+                    this.ClassesWithoutSpecificationClients.Add(moduleName, new List<string>());
+                }
+
+                this.ClassesWithoutSpecificationClients[moduleName].Add(clientName);
+                return new List<string>();
+            }
+            else
+            {
+                if (!this.ModulesUsedWithSpecification.Contains(moduleName))
+                {
+                    ModulesUsedWithSpecification.Add(moduleName);
+                }
+            }
 			return sequence;
 		}
 
+        public Dictionary<string, List<string>> ClassesWithoutSpecificationClients = new Dictionary<string,List<string>>();
 		public List<String> ModulesInSequenceOfCalls = new List<String>();
-
-		private List<String> existingLibraryModulesInNusmvFile = new List<string>();
+        		private List<String> existingLibraryModulesInNusmvFile = new List<string>();
 
 		private void LoadExistingLibraryModulesInNuSmvFile(string nusmvFile)
 		{
@@ -134,6 +145,8 @@ namespace unitTestsParser
 				}
 			}
 		}
+
+        public List<MethodDefinition> MethodsInstantiatingLibraryVariables = new List<MethodDefinition>();
 
 		public List<List<string>> GetSequenceOfCalls(string modulesSMVFile)
 		{
@@ -153,8 +166,10 @@ namespace unitTestsParser
 			}
 
 			foreach (var dep in targetLibDependentAssemblies) {
-				var methodsInstantiatingLibraryVaribles = this.GetMethodsInstantiatingLibraryVariables (dep);
-				foreach (var m in methodsInstantiatingLibraryVaribles) {
+                var methodsOfLibAsms = this.GetMethodsInstantiatingLibraryVariables(dep);
+                this.MethodsInstantiatingLibraryVariables.AddRange(methodsOfLibAsms);
+                foreach (var m in methodsOfLibAsms)
+                {
 					var spec = SequenceOfLibraryCallsMadeInsideMethod (m);
 
 					if (spec.Count > 0) {

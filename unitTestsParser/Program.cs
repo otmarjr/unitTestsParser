@@ -59,9 +59,16 @@ namespace unitTestsParser
             string clientLibPath;
 			if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-				pacoteBiblioteca = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
-				pacoteTestes = @"E:\\github-repos\\nhibernate\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
-				clientLibPath = @"C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin";
+                pacoteBiblioteca = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
+                pacoteTestes = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
+                clientLibPath = @"C:\Users\Otmar\Downloads\FunnelWeb-master\FunnelWeb-master\build\Published\bin";
+                // C:\Users\Otmar\Source\Repos\Who-Can-Help-Me\Solutions\MSpecTests.WhoCanHelpMe\bin\Debug 
+                // C:\Users\Otmar\Source\Repos\rhino-security\Rhino.Security.ActiveRecord\bin\Debug 
+                // C:\Users\Otmar\Source\Repos\fluent-nhibernate\src\FluentNHibernate.Testing\bin\Debug 
+                // C:\Users\Otmar\Downloads\SharpArch.dlls.v2.0.4 
+                // C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin 
+                // C:\Users\Otmar\Downloads\FunnelWeb-master\FunnelWeb-master\build\Published\bin 
+                // C:\Users\Otmar\Source\Repos\UCDArch\SampleUCDArchApp\SampleUCDArchApp.Core\bin\Debug
             }
             else
             {
@@ -137,7 +144,19 @@ namespace unitTestsParser
 
 				var nusmvLibSpecLines = new List<String>(System.IO.File.ReadAllLines (modulesPath));
 
-				nusmvLibSpecLines.ForEach (l => Console.WriteLine (l));
+                var clientMethodsOfTestedClasses = cp.MethodsInstantiatingLibraryVariables.Count;
+                var clientMethodsOfNonTestedClasses = cp.ClassesWithoutSpecificationClients.SelectMany(c => c.Value).Distinct().Count();
+
+                var totalTestedClassesUsed = cp.ModulesUsedWithSpecification.Count;
+                var totalNonTestedClassesUsed = cp.ModulesUsedWithoutSpecification.Count;
+
+                Console.WriteLine("--Total client methods:  " + (clientMethodsOfTestedClasses + clientMethodsOfNonTestedClasses) + " Client methods of tested classes: " + clientMethodsOfTestedClasses + " Client methods of untested classes : " + clientMethodsOfNonTestedClasses);
+                Console.WriteLine("--Total of library classes used:  " + (totalTestedClassesUsed + totalNonTestedClassesUsed) + " Total tested classes: " + totalTestedClassesUsed + " Non-tested classes used: " + totalNonTestedClassesUsed);
+
+				foreach (var usedClassWithoutTest in cp.ModulesUsedWithoutSpecification)
+                {
+                    Console.WriteLine("-- Class used without specification by " + cp.ClassesWithoutSpecificationClients[usedClassWithoutTest].Count  + " client methods: " + usedClassWithoutTest + " present in the following methods: " + string.Join(",", cp.ClassesWithoutSpecificationClients[usedClassWithoutTest]));
+                }
 				foreach (var spec in formalSpecs) {
 					foreach (var call in spec) {
 						Console.WriteLine (call);
