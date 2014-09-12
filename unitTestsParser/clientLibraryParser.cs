@@ -9,24 +9,31 @@ namespace unitTestsParser
 {
 	public class ClientLibraryParser
 	{
-		string targetPackage;
+		string consumedLibraryPackageName;
 		string basePath;
+        string clientApplicationRootNamespace;
 
-		public ClientLibraryParser(string libraryPath, string targetPackageName)
+		public ClientLibraryParser(string libraryPath, string targetPackageName, string inspectedNamespace)
 		{
-			this.targetPackage = targetPackageName;
+			this.consumedLibraryPackageName = targetPackageName;
 			this.basePath = libraryPath;
+            this.clientApplicationRootNamespace = inspectedNamespace;
 		}
 
 		private bool AssemblyIsDependentOnTargetPackage(AssemblyDefinition asm)
 		{
 			foreach (var dep in asm.MainModule.AssemblyReferences) {
-				if (dep.Name.Equals (this.targetPackage, StringComparison.InvariantCultureIgnoreCase))
+				if (dep.Name.Equals (this.consumedLibraryPackageName, StringComparison.InvariantCultureIgnoreCase))
 					return true;
 			}
 
 			return false;
 		}
+
+        private bool AssemblyContainsTargetClientTypes(AssemblyDefinition asm)
+        {
+            return asm.MainModule.Types.Any(t => t.FullName.StartsWith(this.clientApplicationRootNamespace, StringComparison.InvariantCultureIgnoreCase));
+        }
 
 		List<MethodDefinition> GetMethodsInstantiatingLibraryVariables (AssemblyDefinition dep)
 		{
@@ -38,7 +45,7 @@ namespace unitTestsParser
 					if (m.HasBody && m.Body.HasVariables) {
 
 						foreach (var v in m.Body.Variables) {
-							if (v.VariableType.Namespace.StartsWith (this.targetPackage, StringComparison.CurrentCultureIgnoreCase)) {
+							if (v.VariableType.Namespace.StartsWith (this.consumedLibraryPackageName, StringComparison.CurrentCultureIgnoreCase)) {
 								methods.Add (m);
 								break;
 							}
@@ -68,7 +75,7 @@ namespace unitTestsParser
             foreach (var inst in method.Body.Instructions) {
 				if (ReflectionHelper.IsMethodCall (inst)) {
 					var mr = inst.Operand as MethodReference;
-					if (mr.DeclaringType.Namespace.StartsWith (this.targetPackage, StringComparison.InvariantCultureIgnoreCase)) {
+					if (mr.DeclaringType.Namespace.StartsWith (this.consumedLibraryPackageName, StringComparison.InvariantCultureIgnoreCase)) {
                         var methodCall = ReflectionHelper.MethodCallAsString (mr.DeclaringType.Name, mr.Name);
 						methodCalls.Add (methodCall);
 						if (moduleName.Equals (string.Empty)) {
@@ -160,7 +167,8 @@ namespace unitTestsParser
 
 			foreach (var dllFile in System.IO.Directory.GetFiles(this.basePath, "*.dll")) {
                 var asm = AssemblyDefinition.ReadAssembly(dllFile, new ReaderParameters() { AssemblyResolver = resolver });
-				if (this.AssemblyIsDependentOnTargetPackage (asm)) {
+                if (this.AssemblyIsDependentOnTargetPackage(asm) && AssemblyContainsTargetClientTypes(asm))
+                {
 					targetLibDependentAssemblies.Add (asm);
 				}
 			}

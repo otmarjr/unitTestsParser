@@ -57,13 +57,15 @@ namespace unitTestsParser
             string pacoteBiblioteca;
             string pacoteTestes;
             string clientLibPath;
+            string rootNamespace = "Rhino.Security";
 			if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 pacoteBiblioteca = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
                 pacoteTestes = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
-                clientLibPath = @"C:\Users\Otmar\Downloads\FunnelWeb-master\FunnelWeb-master\build\Published\bin";
+                clientLibPath = @"C:\Users\Otmar\Source\Repos\rhino-security\Rhino.Security\bin\Debug";
+                // C:\Users\Otmar\Downloads\FunnelWeb-master\FunnelWeb-master\build\Published\bin";
                 // C:\Users\Otmar\Source\Repos\Who-Can-Help-Me\Solutions\MSpecTests.WhoCanHelpMe\bin\Debug 
-                // C:\Users\Otmar\Source\Repos\rhino-security\Rhino.Security.ActiveRecord\bin\Debug 
+                // C:\Users\Otmar\Source\Repos\rhino-security\Rhino.Security\bin\Debug
                 // C:\Users\Otmar\Source\Repos\fluent-nhibernate\src\FluentNHibernate.Testing\bin\Debug 
                 // C:\Users\Otmar\Downloads\SharpArch.dlls.v2.0.4 
                 // C:\\Users\\Otmar\\Downloads\\Cuyahoga-1.7.0-bin\\bin 
@@ -139,7 +141,7 @@ namespace unitTestsParser
                     Console.WriteLine("Could not locate file at path '{0}'.", modulesPath);
                     return;
                 }
-				var cp = new ClientLibraryParser (clientLibPath, libName);
+				var cp = new ClientLibraryParser (clientLibPath, libName, rootNamespace);
 				var formalSpecs = cp.GetSequenceOfCalls (modulesPath);
 
 				var nusmvLibSpecLines = new List<String>(System.IO.File.ReadAllLines (modulesPath));
@@ -157,11 +159,16 @@ namespace unitTestsParser
                 {
                     Console.WriteLine("-- Class used without specification by " + cp.ClassesWithoutSpecificationClients[usedClassWithoutTest].Count  + " client methods: " + usedClassWithoutTest + " present in the following methods: " + string.Join(",", cp.ClassesWithoutSpecificationClients[usedClassWithoutTest]));
                 }
-				foreach (var spec in formalSpecs) {
+                Console.WriteLine("--Library modules:");
+                nusmvLibSpecLines.ForEach(l => Console.WriteLine(l));
+
+                Console.WriteLine("--Client modules:");
+                foreach (var spec in formalSpecs) {
 					foreach (var call in spec) {
 						Console.WriteLine (call);
 					}
 				}
+                
 
 				int contTests = 0;
 
