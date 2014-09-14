@@ -60,6 +60,7 @@ namespace unitTestsParser
 		public List<string> ModulesUsedWithoutSpecification = new List<String> ();
         public List<string> ModulesUsedWithSpecification = new List<String>();
 		private List<List<String>> SequenceOfModulesWithouSpecification = new List<List<String>> ();
+        public Dictionary<string, string> ModuleInstancesInsideSequences = new Dictionary<string, string>();
 
 		private List<string> SequenceOfLibraryCallsMadeInsideMethod(MethodDefinition method)
 		{
@@ -94,6 +95,8 @@ namespace unitTestsParser
 			if (methodCalls.Count == 0)
 				return new List<string> ();
 
+            ModuleInstancesInsideSequences.Add(clientName, moduleName);
+
             sequence.Add (string.Join (",", methodCalls.Distinct()));
 			sequence.Add ("};");
 
@@ -105,7 +108,10 @@ namespace unitTestsParser
 			var lastCall = methodCalls.First ();
 
 			foreach (var call in methodCalls.Skip(1)) {
-				sequence.Add ("\t\t lib_methods = " + lastCall + " : " + call + ";");
+                if (call != lastCall)
+                {
+                    sequence.Add("\t\t lib_methods = " + lastCall + " : " + call + ";");
+                }
 				lastCall = call;
 			}
 
@@ -176,14 +182,17 @@ namespace unitTestsParser
 			foreach (var dep in targetLibDependentAssemblies) {
                 var methodsOfLibAsms = this.GetMethodsInstantiatingLibraryVariables(dep);
                 this.MethodsInstantiatingLibraryVariables.AddRange(methodsOfLibAsms);
+                int pos = 0;
+
                 foreach (var m in methodsOfLibAsms)
                 {
+                    ++pos;
 					var spec = SequenceOfLibraryCallsMadeInsideMethod (m);
 
 					if (spec.Count > 0) {
 						var argsSignatures = ReflectionHelper.MethodArgumentsSignature (m);
 						ModulesInSequenceOfCalls.Add (ReflectionHelper.MethodCallAsString (m) + "_" + argsSignatures);
-						calls.Add (SequenceOfLibraryCallsMadeInsideMethod (m));
+						calls.Add (spec);
 					} else {
 						// calls.Add (new List<string>(){string.Format("--No calls to library found by method " + m.DeclaringType.Namespace + "." + m.DeclaringType.Name + "." + m.Name)});
 					}

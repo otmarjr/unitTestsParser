@@ -57,12 +57,16 @@ namespace unitTestsParser
             string pacoteBiblioteca;
             string pacoteTestes;
             string clientLibPath;
-            string rootNamespace = "Rhino.Security";
+            string rootNamespace = "Spring.Data.NHibernate";
 			if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 pacoteBiblioteca = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
                 pacoteTestes = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
-                clientLibPath = @"C:\Users\Otmar\Source\Repos\rhino-security\Rhino.Security\bin\Debug";
+                clientLibPath = @"C:\Users\Otmar\Downloads\Spring.Northwind\Spring.Northwind\src\Spring.Northwind.Web\bin";
+                // C:\Users\Otmar\Downloads\Orchard.Web.1.8.1\Orchard\bin";
+                // C:\Users\Otmar\Downloads\Orchard.Web.1.8.1\Orchard\bin
+                // C:\Users\Otmar\Downloads\Spring.Northwind\Spring.Northwind\src\Spring.Northwind.Web\bin // Spring.Data.NHibernate
+                // C:\Users\Otmar\Google Drive\Mestrado\SpecMining\nhPaper\unitTestsParser\unitTestsParser\unitTestsParser\bin\Debug
                 // C:\Users\Otmar\Downloads\FunnelWeb-master\FunnelWeb-master\build\Published\bin";
                 // C:\Users\Otmar\Source\Repos\Who-Can-Help-Me\Solutions\MSpecTests.WhoCanHelpMe\bin\Debug 
                 // C:\Users\Otmar\Source\Repos\rhino-security\Rhino.Security\bin\Debug
@@ -146,16 +150,16 @@ namespace unitTestsParser
 
 				var nusmvLibSpecLines = new List<String>(System.IO.File.ReadAllLines (modulesPath));
 
-                var clientMethodsOfTestedClasses = cp.MethodsInstantiatingLibraryVariables.Count;
-                var clientMethodsOfNonTestedClasses = cp.ClassesWithoutSpecificationClients.SelectMany(c => c.Value).Distinct().Count();
+                var clientMethodsOfTestedClasses = cp.ModulesInSequenceOfCalls.Where(m => cp.ModulesUsedWithSpecification.Contains(cp.ModuleInstancesInsideSequences[m])).Count();
+                var clientMethodsOfNonTestedClasses = cp.ClassesWithoutSpecificationClients.Sum(c => c.Value.Count);
 
-                var totalTestedClassesUsed = cp.ModulesUsedWithSpecification.Count;
-                var totalNonTestedClassesUsed = cp.ModulesUsedWithoutSpecification.Count;
+                var totalTestedClassesUsed = cp.ModulesUsedWithSpecification.Distinct().Where(m => cp.ModuleInstancesInsideSequences.ContainsValue(m)).Count();
+                var totalNonTestedClassesUsed = cp.ModulesUsedWithoutSpecification.Distinct().Where(m => cp.ModuleInstancesInsideSequences.ContainsValue(m)).Count();
 
                 Console.WriteLine("--Total client methods:  " + (clientMethodsOfTestedClasses + clientMethodsOfNonTestedClasses) + " Client methods of tested classes: " + clientMethodsOfTestedClasses + " Client methods of untested classes : " + clientMethodsOfNonTestedClasses);
                 Console.WriteLine("--Total of library classes used:  " + (totalTestedClassesUsed + totalNonTestedClassesUsed) + " Total tested classes: " + totalTestedClassesUsed + " Non-tested classes used: " + totalNonTestedClassesUsed);
 
-				foreach (var usedClassWithoutTest in cp.ModulesUsedWithoutSpecification)
+				foreach (var usedClassWithoutTest in cp.ModulesUsedWithoutSpecification.Distinct())
                 {
                     Console.WriteLine("-- Class used without specification by " + cp.ClassesWithoutSpecificationClients[usedClassWithoutTest].Count  + " client methods: " + usedClassWithoutTest + " present in the following methods: " + string.Join(",", cp.ClassesWithoutSpecificationClients[usedClassWithoutTest]));
                 }
