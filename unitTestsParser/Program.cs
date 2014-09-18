@@ -62,7 +62,7 @@ namespace unitTestsParser
             {
                 pacoteBiblioteca = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\\NHibernate.dll";
                 pacoteTestes = @"E:\\github-repos\\nhibernate-3.3.x\\src\\NHibernate.Test\\bin\\Debug-2.0\NHibernate.Test.dll";
-                clientLibPath = @"C:\Users\Otmar\Downloads\Spring.Northwind\Spring.Northwind\src\Spring.Northwind.Web\bin";
+                clientLibPath = @"e:\github-repos\Spring.Northwind\Spring.Northwind\src\Spring.Northwind.Web\bin";
                 // C:\Users\Otmar\Downloads\Orchard.Web.1.8.1\Orchard\bin";
                 // C:\Users\Otmar\Downloads\Orchard.Web.1.8.1\Orchard\bin
                 // C:\Users\Otmar\Downloads\Spring.Northwind\Spring.Northwind\src\Spring.Northwind.Web\bin // Spring.Data.NHibernate
@@ -163,8 +163,12 @@ namespace unitTestsParser
                 {
                     Console.WriteLine("-- Class used without specification by " + cp.ClassesWithoutSpecificationClients[usedClassWithoutTest].Count  + " client methods: " + usedClassWithoutTest + " present in the following methods: " + string.Join(",", cp.ClassesWithoutSpecificationClients[usedClassWithoutTest]));
                 }
+
+                var stats = tp.CalculateStatistics(cp, formalSpecs);
+
+                stats.ForEach(l => Console.WriteLine(l));
                 Console.WriteLine("--Library modules:");
-                nusmvLibSpecLines.ForEach(l => Console.WriteLine(l));
+                nusmvLibSpecLines.SkipWhile(l => l.StartsWith("--")).ToList().ForEach(l => Console.WriteLine(l));
 
                 Console.WriteLine("--Client modules:");
                 foreach (var spec in formalSpecs) {

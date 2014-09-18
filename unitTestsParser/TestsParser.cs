@@ -11,6 +11,12 @@ namespace unitTestsParser
 {
 	public class TestsParser
 	{
+        public class LibraryDetails
+        {
+            public HashSet<string> TestedMethods { get; set; }
+            public HashSet<string> TestedClasses { get; set; }
+        }
+
 		public TestsParser(string unitTestsDllPath, string testedLibraryDllPath)
 		{
 			this.resolver = new DefaultAssemblyResolver();
@@ -350,6 +356,207 @@ namespace unitTestsParser
 
 			return sbSFM.ToString ();
 		}
+
+        public LibraryDetails GetModuleDetails()
+        {
+            var modules = new List<string>();
+
+            var testsPerClass = this.testSequences.GroupBy(ts => ts.Sequence.First().DeclaringType.Name).ToList();
+
+            var sbSFM = new StringBuilder();
+
+            var methodTransitions = new Dictionary<string, List<Tuple<int, int>>>();
+            var existingMethods = new List<string>();
+
+            var allMethods = new HashSet<string>();
+            foreach (var group in testsPerClass)
+            {
+                var @class = group.Key;
+                var currentState = 1;
+                var lastCreatedState = currentState;
+                var transitions = new List<Tuple<int, int, string>>();
+                var acceptingStates = new List<int>();
+
+                sbSFM.Clear();
+                sbSFM.AppendLine(string.Format("MODULE {0} (called_method)", @class.Replace("`", "_")));
+                sbSFM.AppendLine("\tVAR state : { s1");
+                var transitionTests = new Dictionary<Tuple<int, int, string>, List<TestCallSequence>>();
+                var transitionTestsCursor = new Dictionary<Tuple<int, int, string>, int>();
+                var transtionMethods = new Dictionary<Tuple<int, int, string>, MethodDefinition>();
+                var acceptingStatesTests = new Dictionary<int, List<TestCallSequence>>();
+
+                foreach (var unitTest in group)
+                {
+                    currentState = 1;
+
+                    foreach (var step in unitTest.Sequence)
+                    {
+                        var classOfFirstMethodInTheSequence = unitTest.Sequence.First().DeclaringType.Name;
+
+                        if (!classOfFirstMethodInTheSequence.Equals(@class))
+                            continue;
+
+                        string calledMethod = string.Format("{0}_{1}", step.DeclaringType.Name.Replace("`", "_"), step.Name.Replace(".", "_"));
+
+                        int nextState;
+
+                        var targetState = transitions.Find(t => t.Item1 == currentState && t.Item3.Equals(calledMethod));
+
+                        if (targetState != null)
+                        {
+                            nextState = targetState.Item2;
+                        }
+                        else
+                        {
+                            nextState = lastCreatedState + 1;
+                            lastCreatedState = nextState;
+                            sbSFM.Append(", s" + nextState);
+                            if (!methodTransitions.ContainsKey(calledMethod))
+                            {
+                                methodTransitions[calledMethod] = new List<Tuple<int, int>>();
+                            }
+                            methodTransitions[calledMethod].Add(new Tuple<int, int>(currentState, nextState));
+                        }
+
+                        var transition = new Tuple<int, int, string>(currentState, nextState, calledMethod);
+                        transitions.Add(transition);
+                        if (!existingMethods.Contains(calledMethod))
+                            existingMethods.Add(calledMethod);
+
+                        allMethods.Add(calledMethod);
+                        currentState = nextState;
+
+                        if (!transitionTests.ContainsKey(transition))
+                        {
+                            transitionTests.Add(transition, new List<TestCallSequence>());
+                            transitionTestsCursor.Add(transition, 0);
+                        }
+
+                        if (!transtionMethods.ContainsKey(transition))
+                        {
+                            transtionMethods.Add(transition, step.Resolve());
+                        }
+
+                        transitionTests[transition].Add(unitTest);
+                        if (step.Equals(unitTest.Sequence.Last()))
+                        {
+                            acceptingStates.Add(nextState);
+                            if (!acceptingStatesTests.ContainsKey(nextState))
+                            {
+                                acceptingStatesTests.Add(nextState, new List<TestCallSequence>());
+                            }
+
+                            acceptingStatesTests[nextState].Add(unitTest);
+                        }
+                    }
+                }
+
+                sbSFM.Append("};");
+                sbSFM.AppendLine();
+                sbSFM.AppendLine(string.Format("-- accepting states: s{0}", string.Join(", s", acceptingStates)));
+                sbSFM.Append("methods: {");
+                sbSFM.Append(string.Join(",", existingMethods));
+                existingMethods.Clear();
+                sbSFM.AppendLine("} ;");
+                sbSFM.AppendLine("ASSIGN");
+                sbSFM.AppendLine("init(state) := s1;");
+                sbSFM.AppendLine("next(state) := case ");
+
+
+                foreach (var t in transitions)
+                {
+                    var index = transitionTestsCursor[t];
+                    if (t.Item1 == 1)
+                    {
+                        var test = transitionTests[t][index].OriginalUnitTest;
+                        sbSFM.AppendLine(String.Format("--Calls made in test : {0}", ReflectionHelper.MethodCallAsString(test.DeclaringType.Name, test.Name)));
+                    }
+
+                    var @params = new List<String>();
+                    foreach (var p in transtionMethods[t].Parameters)
+                    {
+                        @params.Add(p.Name + ": " + p.ParameterType.Name);
+                    }
+
+                    sbSFM.AppendLine(string.Format("(called_method = {0}) & state = s{1} : s{2}; -- method parameters: {3} method return type: {4}", t.Item3, t.Item1, t.Item2, string.Join(", ", @params), transtionMethods[t].ReturnType.Name));
+                    if (acceptingStates.Contains(t.Item2))
+                    {
+                        foreach (var a in transitionTests[t][index].Assertions)
+                        {
+                            @params.Clear();
+                            foreach (var p in a.Resolve().Parameters)
+                            {
+                                @params.Add(p.Name + ": " + p.ParameterType.Name);
+                            }
+                            sbSFM.AppendLine(String.Format("-- Assertion :  {0}.{1} ({2}) ", a.DeclaringType.Name, a.Name, string.Join(", ", @params)));
+                        }
+                        transitionTestsCursor[t] += 1;
+                    }
+                }
+                /*
+                foreach (var methodPaths in methodTransitions) {
+                    foreach (var transition in methodPaths.Value) {
+                        sbSFM.AppendLine (string.Format("(called_method = {0}) & state = s{1} : s{2};", methodPaths.Key, transition.Item1, transition.Item2));
+                    }
+                }*/
+                sbSFM.AppendLine("TRUE: state;");
+                sbSFM.AppendLine("esac;");
+
+                sbSFM.AppendLine("DEFINE");
+                sbSFM.AppendLine("\tat_accepting_state := case");
+                foreach (var acs in acceptingStates)
+                {
+                    sbSFM.AppendLine("\t\t state = s" + acs + " : TRUE; -- from unit test(s) " + string.Join(", ", acceptingStatesTests[acs].Select(ut => ReflectionHelper.MethodCallAsString(ut.OriginalUnitTest.DeclaringType.Name, ut.OriginalUnitTest.Name)).ToList()));
+                }
+
+                sbSFM.AppendLine("\t\t TRUE: FALSE; -- By default, not at accepting state.");
+                sbSFM.AppendLine("esac;");
+
+
+                modules.Add(sbSFM.ToString());
+            }
+
+            var stats = new List<string>();
+
+
+            var allClasses = allMethods.Select(m => m.Split('_').First()).Distinct().ToList();
+
+            return new LibraryDetails() { TestedClasses = new HashSet<string>(allClasses), TestedMethods = allMethods };
+
+        }
+
+        public List<string> CalculateStatistics(ClientLibraryParser cp, List<List<string>> formalSpecs)
+        {
+            var stats = new List<string>();
+
+            var allSignatures = formalSpecs.Select(m => m.First().Replace("MODULE ", string.Empty).Replace("()",string.Empty)).ToList();
+            var allClasses = allSignatures.Select(sig => sig.Split('_').First()).Distinct().ToList();
+            var allLibClasses = cp.LibraryCalls.Select(lc => lc.Split('_').First()).Distinct().ToList();
+
+            var details = GetModuleDetails();
+
+            var testedClasses = allLibClasses.Where(l => details.TestedClasses.Contains(l)).ToList();
+            var untestedClasses = allLibClasses.Except(testedClasses).ToList();
+
+            var testedMethods = cp.LibraryCalls.Where(lc => details.TestedMethods.Contains(lc)).ToList();
+            var untestedMethods = cp.LibraryCalls.Except(testedMethods).ToList();
+
+            var validSequenceMethods = allSignatures.Where(sig => !cp.SequneceOfCallsPerMethodSignature[sig].Any(c => untestedMethods.Contains(c))).ToList();
+            var invalidSequenceMethods = allSignatures.Except(validSequenceMethods).ToList();
+
+            stats.Add("-- Total classes consuming library methods: " + allClasses.Count + " classes: " + string.Join(",", allClasses));
+            stats.Add("-- Total of library classes used: " + allLibClasses.Count() + " classes: " + string.Join(",", allLibClasses));
+            stats.Add("-- Total of tested library classes used: " +  testedClasses.Count + " classes: " + string.Join(",", testedClasses));
+            stats.Add("-- Total of untested library classes used: " +  untestedClasses.Count + " classes: " + string.Join(",", untestedClasses));
+            stats.Add("-- Total tested library methods present: " + testedMethods.Count + " methods: " + string.Join(",", testedMethods));
+            stats.Add("-- Total untested library methods present: " + untestedMethods.Count + " methods: " + string.Join(",", untestedMethods));
+            stats.Add("-- Total client methods containg sequences only of tested methods: " + validSequenceMethods.Count + " client methods: " + string.Join(",", validSequenceMethods));
+            stats.Add("-- Total client methods containg sequences of at least one untested method: " + invalidSequenceMethods.Count + " client methods: " + string.Join(",", invalidSequenceMethods));
+            stats.Add("-- Total client methods containg empty sequences: " + cp.ModulesUsedWithoutSpecification.Count + " methods: " + string.Join(",", cp.ModulesUsedWithoutSpecification));
+
+            return stats;
+        }
+
 		public List<string> GenerateNuSMVModules(bool traceStatistics = true)
 		{
 			var modules = new List<string> ();
@@ -362,6 +569,11 @@ namespace unitTestsParser
 			var existingMethods = new List<string> ();
 
             var allMethods = new HashSet<string>();
+            int totalAcceptingStates = 0;
+
+            Dictionary<int, int> acceptingSequenceSizes = new Dictionary<int,int>();
+            Dictionary<int, List<string>> transitionsPerSequenceSize = new Dictionary<int, List<string>>();
+
 			foreach (var group in testsPerClass) 
 			{
 				var @class = group.Key;
@@ -377,11 +589,13 @@ namespace unitTestsParser
 				var transitionTestsCursor = new Dictionary<Tuple<int,int,string>, int> ();
 				var transtionMethods = new Dictionary<Tuple<int,int,string>, MethodDefinition> ();
 				var acceptingStatesTests = new Dictionary<int, List<TestCallSequence>> ();
+                var sequenceSize = 0;
 
 				foreach (var unitTest in group)
 				{
 					currentState = 1;
-
+                    sequenceSize = 0;
+    
 					foreach (var step in unitTest.Sequence)
 					{
 						var classOfFirstMethodInTheSequence = unitTest.Sequence.First ().DeclaringType.Name;
@@ -411,6 +625,8 @@ namespace unitTestsParser
 							methodTransitions[calledMethod].Add(new Tuple<int, int>(currentState, nextState));
 						}
 
+                        sequenceSize++;
+
 						var transition = new Tuple<int, int, string> (currentState, nextState, calledMethod); 
 						transitions.Add(transition);
 						if (!existingMethods.Contains (calledMethod))
@@ -433,10 +649,19 @@ namespace unitTestsParser
 						if (step.Equals(unitTest.Sequence.Last()))
 						{
 							acceptingStates.Add(nextState);
+                            totalAcceptingStates++;
 							if (!acceptingStatesTests.ContainsKey (nextState)) {
 								acceptingStatesTests.Add (nextState, new List<TestCallSequence> ());
-							} 
+							}
 
+                            if (!acceptingSequenceSizes.ContainsKey(sequenceSize))
+                            {
+                                acceptingSequenceSizes.Add(sequenceSize, 1);
+                            }
+                            else
+                            {
+                                acceptingSequenceSizes[sequenceSize]++;
+                            }
 							acceptingStatesTests [nextState].Add (unitTest);
 						}
 					}
@@ -506,10 +731,17 @@ namespace unitTestsParser
 
             var allClasses = allMethods.Select(m => m.Split('_').First()).Distinct().ToList();
 
-            stats.Add(string.Format("-- Total classes having first method : " + testsPerClass.Count));
-            stats.Add(string.Format("-- Total methods present in test : " + allMethods.Count + " methods: " + string.Join(",", allMethods)));
-            stats.Add(string.Format("-- Total class present in test : " + allClasses.Count + " classes: " + string.Join(",", allClasses)));
-
+            stats.Add(string.Format("-- Total library classes having first method in unit test : " + testsPerClass.Count));
+            stats.Add("-- Total unit tests " + this.unitTestsMethods.Count);
+            stats.Add("-- Total recognizable sequences " + totalAcceptingStates);
+            stats.Add("-- Size of minimum recognizable sequence " + acceptingSequenceSizes.Keys.Min());
+            stats.Add("-- Size of maximum recognizable sequence " + acceptingSequenceSizes.Keys.Max());
+            stats.Add(string.Format("-- Total library public methods : " + this.libraryAssembly.MainModule.Types.Cast<TypeDefinition>().Select(t => t.Methods.Cast<MethodDefinition>().Where(m => t.IsPublic && m.IsPublic)).Count()));
+            stats.Add(string.Format("-- Total library methods present in test : " + allMethods.Count + " methods: " + string.Join(",", allMethods)));
+            stats.Add(string.Format("-- Total public library classes: " + this.libraryAssembly.MainModule.Types.Cast<TypeDefinition>().Where(t => t.IsPublic).Count()));
+            stats.Add(string.Format("-- Total library classes present in test : " + allClasses.Count + " classes: " + string.Join(",", allClasses)));
+            
+            
             modules.InsertRange(0, stats);
 			return modules;
 		}

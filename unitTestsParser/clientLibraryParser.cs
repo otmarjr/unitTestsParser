@@ -61,6 +61,8 @@ namespace unitTestsParser
         public List<string> ModulesUsedWithSpecification = new List<String>();
 		private List<List<String>> SequenceOfModulesWithouSpecification = new List<List<String>> ();
         public Dictionary<string, string> ModuleInstancesInsideSequences = new Dictionary<string, string>();
+        public HashSet<string> LibraryCalls = new HashSet<string>();
+        public Dictionary<string, List<string>> SequneceOfCallsPerMethodSignature = new Dictionary<string, List<string>>();
 
 		private List<string> SequenceOfLibraryCallsMadeInsideMethod(MethodDefinition method)
 		{
@@ -82,6 +84,7 @@ namespace unitTestsParser
 						if (moduleName.Equals (string.Empty)) {
 							moduleName = mr.DeclaringType.Name;
 						}
+                        LibraryCalls.Add(methodCall);
 					}
 				}
 			}
@@ -92,6 +95,8 @@ namespace unitTestsParser
 				moduleHasSpecification = false;
 			}
 
+            if (!SequneceOfCallsPerMethodSignature.ContainsKey(clientName))
+                SequneceOfCallsPerMethodSignature.Add(clientName, methodCalls.Distinct().ToList());
 			if (methodCalls.Count == 0)
 				return new List<string> ();
 
