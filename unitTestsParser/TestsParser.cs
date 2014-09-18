@@ -350,7 +350,7 @@ namespace unitTestsParser
 
 			return sbSFM.ToString ();
 		}
-		public List<string> GenerateNuSMVModules()
+		public List<string> GenerateNuSMVModules(bool traceStatistics = true)
 		{
 			var modules = new List<string> ();
 
@@ -360,6 +360,8 @@ namespace unitTestsParser
 
 			var methodTransitions = new Dictionary<string, List<Tuple<int,int>>> ();
 			var existingMethods = new List<string> ();
+
+            var allMethods = new HashSet<string>();
 			foreach (var group in testsPerClass) 
 			{
 				var @class = group.Key;
@@ -414,6 +416,7 @@ namespace unitTestsParser
 						if (!existingMethods.Contains (calledMethod))
 							existingMethods.Add (calledMethod);
 
+                        allMethods.Add(calledMethod);
 						currentState = nextState;
 
 						if (!transitionTests.ContainsKey (transition)) {
@@ -444,6 +447,7 @@ namespace unitTestsParser
 				sbSFM.AppendLine(string.Format("-- accepting states: s{0}", string.Join(", s",acceptingStates)));
 				sbSFM.Append ("methods: {");
 				sbSFM.Append (string.Join (",", existingMethods));
+                existingMethods.Clear();
 				sbSFM.AppendLine ("} ;");
 				sbSFM.AppendLine ("ASSIGN");
 				sbSFM.AppendLine ("init(state) := s1;");
@@ -496,6 +500,17 @@ namespace unitTestsParser
 
 				modules.Add(sbSFM.ToString());
 			}
+
+            var stats = new List<string>();
+
+
+            var allClasses = allMethods.Select(m => m.Split('_').First()).Distinct().ToList();
+
+            stats.Add(string.Format("-- Total classes having first method : " + testsPerClass.Count));
+            stats.Add(string.Format("-- Total methods present in test : " + allMethods.Count + " methods: " + string.Join(",", allMethods)));
+            stats.Add(string.Format("-- Total class present in test : " + allClasses.Count + " classes: " + string.Join(",", allClasses)));
+
+            modules.InsertRange(0, stats);
 			return modules;
 		}
 
